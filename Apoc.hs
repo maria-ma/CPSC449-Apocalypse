@@ -45,7 +45,7 @@ main = main' (unsafePerformIO getArgs)
 main'           :: [String] -> IO()
 main' args
     | lengthArgs == 0 = do
-        putStrLn "\nin interactive mode"
+        printDesc
         putStrLn "\nThe initial board:"
         print initBoard
 
@@ -66,10 +66,36 @@ main' args
     | lengthArgs == 2 = do
         putStrLn "\nin chosen strategy mode"
         putStrLn "\ncheck the inputted strategies if valid\nand print initial board"
-    | otherwise = putStrLn "\ninvalid number of arguments. print out the strategy formats"
+        checkStrategyValid $ head args
+        checkStrategyValid $ last args
+    | otherwise = do
+        putStrLn "\nInvalid number of arguments for strategies. Possible strategies are:"
+        printStrategies
     where lengthArgs = length args
 
 --Additional Functions-------------------------------------------------------------
+
+checkStrategyValid :: String -> IO()
+checkStrategyValid "human" = putStrLn "\nok"  -- TODO: implement the game strategies
+checkStrategyValid "random" = putStrLn "\nok" -- and return it to the main function
+checkStrategyValid "greedy" = putStrLn "\nok" -- (will be type Chooser)
+checkStrategyValid x = do 
+                       putStrLn ("\n" ++ x ++ " is an invalid strategy name. Valid list of strategies:")
+                       printStrategies
+
+--printStrategies :: IO()
+printStrategies = let strategies = ["human","random","greedy"]
+                  in  putStrLn $ (foldr (++) "" ((map (\x -> "\n  " ++ x) strategies)))
+
+--printDesc :: IO()
+printDesc = do
+            putStrLn "\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:"
+            printStrategies
+
+---Player functions----------------------------------------------------------------
+
+--greedy :: Chooser
+--random :: Chooser
 
 
 ---2D list utility functions-------------------------------------------------------
@@ -84,7 +110,3 @@ replace xs n elem = let (ys,zs) = splitAt n xs
 -- | Replaces the (x,y)th element in a list of lists with a new element.
 replace2        :: [[a]] -> (Int,Int) -> a -> [[a]]
 replace2 xs (x,y) elem = replace xs y (replace (xs !! y) x elem)
-
---checkArgs       :: [a] -> IO()
---checkArgs src = do
-    
