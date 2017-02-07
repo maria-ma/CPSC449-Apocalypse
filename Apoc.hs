@@ -39,29 +39,38 @@ import ApocStrategyHuman
 main = main' (unsafePerformIO getArgs)
 
 {- | We have a main' IO function so that we can either:
-
      1. call our program from GHCi in the usual way
      2. run from the command line by calling this function with the value from (getArgs)
 -}
 main'           :: [String] -> IO()
-main' args = do
-    putStrLn "\nThe initial board:"
-    print initBoard
+main' args
+    | lengthArgs == 0 = do
+        putStrLn "\nin interactive mode"
+        putStrLn "\nThe initial board:"
+        print initBoard
 
-    putStrLn $ "\nThe initial board with back human (the placeholder for human) strategy having played one move\n"
-               ++ "(clearly illegal as we must play in rounds!):"
-    move <- human (initBoard) Normal Black
-    putStrLn (show $ GameState (if move==Nothing
-                                then Passed
-                                else Played (head (fromJust move), head (tail (fromJust move))))
-                               (blackPen initBoard)
-                               (Passed)
-                               (whitePen initBoard)
-                               (replace2 (replace2 (theBoard initBoard)
-                                                   ((fromJust move) !! 1)
-                                                   (getFromBoard (theBoard initBoard) ((fromJust move) !! 0)))
-                                         ((fromJust move) !! 0)
-                                         E))
+        putStrLn $ "\nThe initial board with back human (the placeholder for human) strategy having played one move\n"
+                   ++ "(clearly illegal as we must play in rounds!):"
+        move <- human (initBoard) Normal Black
+        putStrLn (show $ GameState (if move==Nothing
+                                    then Passed
+                                    else Played (head (fromJust move), head (tail (fromJust move))))
+                                   (blackPen initBoard)
+                                   (Passed)
+                                   (whitePen initBoard)
+                                   (replace2 (replace2 (theBoard initBoard)
+                                                       ((fromJust move) !! 1)
+                                                       (getFromBoard (theBoard initBoard) ((fromJust move) !! 0)))
+                                             ((fromJust move) !! 0)
+                                             E))
+    | lengthArgs == 2 = do
+        putStrLn "\nin chosen strategy mode"
+        putStrLn "\ncheck the inputted strategies if valid\nand print initial board"
+    | otherwise = putStrLn "\ninvalid number of arguments. print out the strategy formats"
+    where lengthArgs = length args
+
+--Additional Functions-------------------------------------------------------------
+
 
 ---2D list utility functions-------------------------------------------------------
 
@@ -76,3 +85,6 @@ replace xs n elem = let (ys,zs) = splitAt n xs
 replace2        :: [[a]] -> (Int,Int) -> a -> [[a]]
 replace2 xs (x,y) elem = replace xs y (replace (xs !! y) x elem)
 
+--checkArgs       :: [a] -> IO()
+--checkArgs src = do
+    
