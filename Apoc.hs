@@ -46,6 +46,8 @@ main'           :: [String] -> IO()
 main' args
     | lengthArgs == 0 = do
         printDesc
+        askStrategies "black"
+        askStrategies "white"
         putStrLn "\nThe initial board:"
         print initBoard
 
@@ -85,12 +87,18 @@ checkStrategyValid x = do
 
 --printStrategies :: IO()
 printStrategies = let strategies = ["human","random","greedy"]
-                  in  putStrLn $ (foldr (++) "" ((map (\x -> "\n  " ++ x) strategies)))
+              in  putStrLn $ (foldr (++) "" ((map (\x -> "\n  " ++ x) strategies)))
 
 --printDesc :: IO()
 printDesc = do
-            putStrLn "\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:"
-            printStrategies
+        putStrLn "\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:"
+        printStrategies
+
+askStrategies :: String -> IO()
+askStrategies player = do 
+        putStrLn ("\nPlease enter a strategy for the " ++ player ++ " player: ")
+        strategyIn <- getLine
+        checkStrategyValid strategyIn
 
 ---Player functions----------------------------------------------------------------
 
