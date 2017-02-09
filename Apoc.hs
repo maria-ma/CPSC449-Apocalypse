@@ -31,6 +31,7 @@ import System.Environment
 import System.IO.Unsafe
 import ApocTools
 import ApocStrategyHuman
+import System.Exit
 
 
 ---Main-------------------------------------------------------------
@@ -70,9 +71,7 @@ main' args
         putStrLn "\ncheck the inputted strategies if valid\nand print initial board"
         checkStrategyValid $ head args
         checkStrategyValid $ last args
-    | otherwise = do
-        putStrLn "\nInvalid number of arguments for strategies. Possible strategies are:"
-        printStrategies
+    | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
     where lengthArgs = length args
 
 --Additional Functions-------------------------------------------------------------
@@ -81,30 +80,20 @@ checkStrategyValid :: String -> IO()
 checkStrategyValid "human" = putStrLn "\nok"  -- TODO: implement the game strategies
 checkStrategyValid "random" = putStrLn "\nok" -- and return it to the main function
 checkStrategyValid "greedy" = putStrLn "\nok" -- (will be type Chooser)
-checkStrategyValid x = do 
-                       putStrLn ("\n" ++ x ++ " is an invalid strategy name. Valid list of strategies:")
-                       printStrategies
+checkStrategyValid x = die("\n" ++ x ++ " is an invalid strategy name. Valid list of strategies:" ++ printStrategies)
 
-printStrategies :: IO()
+printStrategies :: String
 printStrategies = let strategies = ["human","random","greedy"]
-              in  putStrLn $ (foldr (++) "" ((map (\x -> "\n  " ++ x) strategies)))
+              in (foldr (++) "" ((map (\x -> "\n  " ++ x) strategies)))
 
 printDesc :: IO()
-printDesc = do
-        putStrLn "\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:"
-        printStrategies
+printDesc = putStrLn ("\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:" ++ printStrategies)
 
 askStrategies :: String -> IO()
 askStrategies player = do 
         putStrLn ("\nPlease enter a strategy for the " ++ player ++ " player: ")
         strategyIn <- getLine
         checkStrategyValid strategyIn
-
----Player functions----------------------------------------------------------------
-
---greedy :: Chooser
---random :: Chooser
-
 
 ---2D list utility functions-------------------------------------------------------
 

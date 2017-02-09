@@ -31,3 +31,5 @@ import ApocTools
 human    :: Chooser
 human b Normal        c = return (Just [(0,0),(2,1)])
 human b PawnPlacement c = return (Just [(2,2)])
+
+-- add prompts for the black and white player
