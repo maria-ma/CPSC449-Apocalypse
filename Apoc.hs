@@ -85,11 +85,11 @@ checkStrategyValid x = do
                        putStrLn ("\n" ++ x ++ " is an invalid strategy name. Valid list of strategies:")
                        printStrategies
 
---printStrategies :: IO()
+printStrategies :: IO()
 printStrategies = let strategies = ["human","random","greedy"]
               in  putStrLn $ (foldr (++) "" ((map (\x -> "\n  " ++ x) strategies)))
 
---printDesc :: IO()
+printDesc :: IO()
 printDesc = do
         putStrLn "\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:"
         printStrategies
