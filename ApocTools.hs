@@ -281,10 +281,4 @@ data PlayType = Normal -- ^ The 'Chooser' should return a list of 2 (x,y) coordi
 -}
 type Chooser = GameState -> PlayType -> Player -> IO (Maybe [(Int,Int)])
 
-greedy :: Chooser
-greedy a Normal b        = return (Just [(0,0),(1,1)]) -- ^ TODO: finish the functions for the greedy strategy 
-greedy a PawnPlacement b = return (Just [(2,2)])
 
-random :: Chooser
-random a Normal b        = return (Just [(0,0),(1,1)]) -- ^ TODO: finish the functions for the random strategy
-random a PawnPlacement b = return (Just [(2,2)])

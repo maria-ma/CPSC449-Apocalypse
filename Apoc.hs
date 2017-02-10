@@ -69,17 +69,18 @@ main' args
     | lengthArgs == 2 = do
         putStrLn "\nin chosen strategy mode"
         putStrLn "\ncheck the inputted strategies if valid\nand print initial board"
-        checkStrategyValid $ head args
-        checkStrategyValid $ last args
+        blackStr <- checkStrategyValid $ head args
+        whiteStr <- checkStrategyValid $ last args
+        print initBoard
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
     where lengthArgs = length args
 
 --Additional Functions-------------------------------------------------------------
 
-checkStrategyValid :: String -> IO()
-checkStrategyValid "human" = putStrLn "\nok"  -- TODO: implement the game strategies
-checkStrategyValid "random" = putStrLn "\nok" -- and return it to the main function
-checkStrategyValid "greedy" = putStrLn "\nok" -- (will be type Chooser)
+checkStrategyValid :: String -> IO(Chooser)
+checkStrategyValid "human" = return human  -- TODO: implement the game strategies
+checkStrategyValid "random" = return random -- and return it to the main function
+checkStrategyValid "greedy" = return greedy -- (will be type Chooser)
 checkStrategyValid x = die("\n" ++ x ++ " is an invalid strategy name. Valid list of strategies:" ++ printStrategies)
 
 printStrategies :: String
@@ -89,11 +90,22 @@ printStrategies = let strategies = ["human","random","greedy"]
 printDesc :: IO()
 printDesc = putStrLn ("\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:" ++ printStrategies)
 
-askStrategies :: String -> IO()
+askStrategies :: String -> IO(Chooser)
 askStrategies player = do 
         putStrLn ("\nPlease enter a strategy for the " ++ player ++ " player: ")
         strategyIn <- getLine
-        checkStrategyValid strategyIn
+        strategy <- checkStrategyValid strategyIn
+        return strategy
+
+---Player Strategy functions-------------------------------------------------------
+
+greedy :: Chooser
+greedy a Normal b        = return (Just [(0,0),(1,1)]) -- ^ TODO: finish the functions for greedy strategy
+greedy a PawnPlacement b = return (Just [(2,2)])
+
+random :: Chooser
+random a Normal b        = return (Just [(0,0),(1,1)]) -- ^ TODO: finish the functions for random strategy
+random a PawnPlacement b = return (Just [(2,2)])
 
 ---2D list utility functions-------------------------------------------------------
 
