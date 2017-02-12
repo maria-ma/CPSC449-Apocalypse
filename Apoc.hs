@@ -76,7 +76,7 @@ main' args
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
     where lengthArgs = length args
 
---User Prompt Functions-------------------------------------------------------------
+---User Prompt Functions------------------------------------------------------------
 
 -- | checks if the user's inputted strategy is valid
 checkStrategyValid :: String -> IO(Chooser)
@@ -104,19 +104,30 @@ askStrategies player = do
 
 ---Movement functions--------------------------------------------------------------
 
---isMoveValid :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
---isMoveValid board player start dst =
---    let startCell  = cell2Char $ getFromBoard board start
---        startPiece = pieceFrom $ getFromBoard board start
+-- | checkMoveLegal: checks if a normal move is legal
+--   params: the board, player, start coordinates, end coordinates
+--   returns: boolean indicating if the indicated move is legal
+checkMoveLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
+checkMoveLegal board player start to 
+    | (cell2Char startCell) == '_' = False
+    | ((playerOf startPiece) == player) && (startCell == WP || startCell == BP) = checkPawnLegal board player start to
+    | ((playerOf startPiece) == player) && (startCell == WK || startCell == BK) = checkKnightLegal board player start to
+    | otherwise = False
+    where startCell  = getFromBoard board start
+          startPiece = pieceOf startCell
 
--- | checkEmptySpace: checks in the destination coordinate is empty
---   (this function will also work for checking if a PawnPlacement move is valid
+-- | checkEmptySpace: checks if the destination coordinate is empty
+--   (this function will also work for checking if a PawnPlacement move is legal
+--   params: the board, destination coordinate
+--   returns: boolean if the move was legal
 checkEmptySpace :: Board -> (Int, Int) -> Bool
 checkEmptySpace board x
     | getFromBoard board x == E = True
     | otherwise = False
 
 -- | checkOpponent: checks if the destination coordinate contains an opponent
+--   params: board, current player, destination coordinate
+--   returns: boolean if the destination coordinate contains an opponent piece
 checkOpponent :: Board -> Player -> (Int, Int) -> Bool
 checkOpponent board player to =  (player /= getPlayer)
                                  where getPlayer = playerOf $ pieceOf $ getFromBoard board to
