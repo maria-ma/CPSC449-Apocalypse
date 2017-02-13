@@ -70,11 +70,13 @@ main' args
     | lengthArgs == 2 = do
         putStrLn "\nin chosen strategy mode"
         putStrLn "\ncheck the inputted strategies if valid\nand print initial board"
-        blackStr <- checkStrategyValid $ (map toLower (head args))
-        whiteStr <- checkStrategyValid $ (map toLower (last args))
+        blackStr <- checkStrategyValid getBlackStr
+        whiteStr <- checkStrategyValid getWhiteStr
         print initBoard
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
-    where lengthArgs = length args
+    where lengthArgs  = length args
+          getBlackStr = map toLower (head args)
+          getWhiteStr = map toLower (last args)
 
 ---User Prompt Functions------------------------------------------------------------
 
@@ -102,7 +104,7 @@ askStrategies player = do
         strategy <- checkStrategyValid strategyIn
         return strategy
 
----Movement functions--------------------------------------------------------------
+---Movement Validation functions----------------------------------------------------
 
 -- | checkMoveLegal: checks if a normal move is legal
 --   params: the board, player, start coordinates, end coordinates
@@ -160,6 +162,42 @@ checkKnightLegal board player (fromX, fromY) to
    | (to == (fromX - 2, fromY + 1)) && (checkTo) = True -- ^ (-2,+1)
    | otherwise = False
    where checkTo = ((checkEmptySpace board to) || (checkOpponent board player to))
+
+---AI Movement functions-----------------------------------------------------------
+
+-- get list of playable pieces?
+-- based on player, return the list of all of the player's pieces
+-- needs: board, player
+-- has to do: go through the entire board (column by column, row by row) and add associated parts
+getPieces :: Board -> Player -> [(Int, Int)]
+getPieces board White = getBoardPieces (\x -> x == WP || x == WK) board 0
+getPieces board Black = getBoardPieces (\x -> x == BP || x == BK) board 0
+
+getBoardPieces :: (a -> Bool) -> [[a]] -> Int -> [(Int, Int)]
+getBoardPieces func [] _ = []
+getBoardPieces func (x:xs) row = (map (\x -> (x, row)) $ getRowPieces func x 0) ++ (getBoardPieces func xs (row + 1))
+
+getRowPieces :: (a -> Bool) -> [a] -> Int -> [Int]
+getRowPieces func [] _ = []
+getRowPieces func (x:xs) column = if func x then column:(getRowPieces func xs (column + 1)) else getRowPieces func xs (column + 1)
+
+--getPieceList board White = foldl (++) [] (map (\x -> ((x == WK) || (x == WP))) board)
+--    where playPiece = playerOf $ pieceOf $ getFromBoard 
+--getPieceList board Black = foldl (++) [] (map (\x -> ((x == BK) || (x == BP))) board)
+
+-- | getMoveList: gets the list of valid moves based on the current player's piece
+getMoveList :: Board -> Player -> (Int, Int) -> [(Int, Int)]
+getMoveList board player (fromX, fromY)
+    -- * player is currently playing a pawn
+    | (startPiece == WP) || (startPiece == BP) = 
+        [(fromX, fromY + forward), (fromX - 1, fromY + forward), (fromX + 1, fromY + forward)]
+    -- * otherwise, player is currently playing a knight
+    | otherwise = 
+        [(fromX + 1, fromY + 2), (fromX + 1, fromY - 2), (fromX - 1, fromY - 2), (fromX -1, fromY +2), (fromX + 2, fromY + 1), (fromX + 2, fromY - 1), (fromX -2, fromY - 1), (fromX - 2, fromY + 1)]
+    where startPiece = getFromBoard board (fromX, fromY)
+          forward = case player of
+                        Black -> -1
+                        White -> 1
 
 ---Player Strategy functions-------------------------------------------------------
 
