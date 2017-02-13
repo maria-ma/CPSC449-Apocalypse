@@ -1,6 +1,6 @@
 {- |
 Module      : Main
-Description : Template to get you started on the CPSC 449 Winter 2016 Apocalypse assignment.
+Description : Template to get you started on the CPSC 449 Winter 2016 Apocalypse assignment. 
 Copyright   : Copyright 2016, Rob Kremer (rkremer@ucalgary.ca), University of Calgary.
 License     : Permission to use, copy, modify, distribute and sell this software
               and its documentation for any purpose is hereby granted without fee, provided
@@ -27,12 +27,13 @@ module Main (
       ) where
 
 import Data.Maybe (fromJust, isNothing)
+import Data.Char
 import System.Environment
 import System.IO.Unsafe
+import System.Exit
 import ApocTools
 import ApocStrategyHuman
-import System.Exit
-
+import ApocStrategyRandom
 
 ---Main-------------------------------------------------------------
 
@@ -69,27 +70,33 @@ main' args
     | lengthArgs == 2 = do
         putStrLn "\nin chosen strategy mode"
         putStrLn "\ncheck the inputted strategies if valid\nand print initial board"
-        blackStr <- checkStrategyValid $ head args
-        whiteStr <- checkStrategyValid $ last args
+        blackStr <- checkStrategyValid getBlackStr
+        whiteStr <- checkStrategyValid getWhiteStr
         print initBoard
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
-    where lengthArgs = length args
+    where lengthArgs  = length args
+          getBlackStr = map toLower (head args)
+          getWhiteStr = map toLower (last args)
 
---Additional Functions-------------------------------------------------------------
+---User Prompt Functions------------------------------------------------------------
 
+-- | checks if the user's inputted strategy is valid
 checkStrategyValid :: String -> IO(Chooser)
 checkStrategyValid "human" = return human  -- TODO: implement the game strategies
 checkStrategyValid "random" = return random -- and return it to the main function
 checkStrategyValid "greedy" = return greedy -- (will be type Chooser)
 checkStrategyValid x = die("\n" ++ x ++ " is an invalid strategy name. Valid list of strategies:" ++ printStrategies)
 
+-- | string of the list of available, playable strategies
 printStrategies :: String
 printStrategies = let strategies = ["human","random","greedy"]
               in (foldr (++) "" ((map (\x -> "\n  " ++ x) strategies)))
 
+-- | prints a welcome message and the list of playable strategies in interactive mode
 printDesc :: IO()
 printDesc = putStrLn ("\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:" ++ printStrategies)
 
+-- | (in interactive mode) prompts user to input a strategy
 askStrategies :: String -> IO(Chooser)
 askStrategies player = do 
         putStrLn ("\nPlease enter a strategy for the " ++ player ++ " player: ")
@@ -97,15 +104,106 @@ askStrategies player = do
         strategy <- checkStrategyValid strategyIn
         return strategy
 
+---Movement Validation functions----------------------------------------------------
+
+-- | checkMoveLegal: checks if a normal move is legal
+--   params: the board, player, start coordinates, end coordinates
+--   returns: boolean indicating if the indicated move is legal
+checkMoveLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
+checkMoveLegal board player start to 
+    | (cell2Char startCell) == '_' = False
+    | ((playerOf startPiece) == player) && (startCell == WP || startCell == BP) = checkPawnLegal board player start to
+    | ((playerOf startPiece) == player) && (startCell == WK || startCell == BK) = checkKnightLegal board player start to
+    | otherwise = False
+    where startCell  = getFromBoard board start
+          startPiece = pieceOf startCell
+
+-- | checkEmptySpace: checks if the destination coordinate is empty
+--   (this function will also work for checking if a PawnPlacement move is legal
+--   params: the board, destination coordinate
+--   returns: boolean if the move was legal
+checkEmptySpace :: Board -> (Int, Int) -> Bool
+checkEmptySpace board x
+    | getFromBoard board x == E = True
+    | otherwise = False
+
+-- | checkOpponent: checks if the destination coordinate contains an opponent
+--   params: board, current player, destination coordinate
+--   returns: boolean if the destination coordinate contains an opponent piece
+checkOpponent :: Board -> Player -> (Int, Int) -> Bool
+checkOpponent board player to =  (player /= getPlayer)
+                                 where getPlayer = playerOf $ pieceOf $ getFromBoard board to
+
+-- | checkPawnLegal: checks if the player's intended pawn movement is valid
+--   params: the board, current player, and the start and destination coordinates
+--   returns: boolean on pawn movement validity
+checkPawnLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
+checkPawnLegal board player (fromX, fromY) to
+    | (to == (fromX, fromY + forward)) && (checkEmptySpace board to)         = True -- ^ move to an empty space    ( 0,+1)
+    | to  == (fromX - 1, fromY + forward) && (checkOpponent board player to) = True -- ^ eat a piece to the left   (-1,+1)   
+    | to  == (fromX + 1, fromY + forward) && (checkOpponent board player to) = True -- ^ each a piece to the right (+1,+1)
+    | otherwise = False
+    where forward = case player of
+                      Black -> -1
+                      White -> 1
+
+-- | checkKnightLegal: checks if the player's intended knight movement is valid
+--   params: the board, curren player, start and end desination cell coordinates
+--   returns: boolean on knight movement validity
+checkKnightLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
+checkKnightLegal board player (fromX, fromY) to
+   | (to == (fromX + 1, fromY + 2)) && (checkTo) = True -- ^ (+1,+2)
+   | (to == (fromX + 1, fromY - 2)) && (checkTo) = True -- ^ (+1,-2)
+   | (to == (fromX - 1, fromY - 2)) && (checkTo) = True -- ^ (-1,-2)
+   | (to == (fromX - 1, fromY + 2)) && (checkTo) = True -- ^ (-1,+2)
+   | (to == (fromX + 2, fromY + 1)) && (checkTo) = True -- ^ (+2,+1)
+   | (to == (fromX + 2, fromY - 1)) && (checkTo) = True -- ^ (+2,-1)
+   | (to == (fromX - 2, fromY - 1)) && (checkTo) = True -- ^ (-2,-1)
+   | (to == (fromX - 2, fromY + 1)) && (checkTo) = True -- ^ (-2,+1)
+   | otherwise = False
+   where checkTo = ((checkEmptySpace board to) || (checkOpponent board player to))
+
+---AI Movement functions-----------------------------------------------------------
+
+-- | getPieces: gets list of playable pieces based on the player
+--   params: the board, the player type
+--   returns: list of tupbles indicating playable start sources
+getPieces :: Board -> Player -> [(Int, Int)]
+getPieces board White = getBoardPieces (\x -> x == WP || x == WK) board 0
+getPieces board Black = getBoardPieces (\x -> x == BP || x == BK) board 0
+
+-- | getBoardPieces: gets all available board pieces
+--   input: boolean function indicating which board piece is playable (white or black pieces), the board, starting row number
+--   returns: list of tuples of playable pieces
+getBoardPieces :: (a -> Bool) -> [[a]] -> Int -> [(Int, Int)]
+getBoardPieces func [] _ = []
+getBoardPieces func (x:xs) row = (map (\x -> (x, row)) $ getRowPieces func x 0) ++ (getBoardPieces func xs (row + 1))
+
+-- | getRowPieces: gets all playable pieces in a specific row (traverses through the column)
+--   input: boolean function called from getBoardPieces, cell from board, (int) current column number
+getRowPieces :: (a -> Bool) -> [a] -> Int -> [Int]
+getRowPieces func [] _ = []
+getRowPieces func (x:xs) column = if func x then column:(getRowPieces func xs (column + 1)) else getRowPieces func xs (column + 1)
+
+-- | getMoveList: gets the list of valid moves based on the current player's piece
+getMoveList :: Board -> Player -> (Int, Int) -> [(Int, Int)]
+getMoveList board player (fromX, fromY)
+    -- * player is currently playing a pawn
+    | (startPiece == WP) || (startPiece == BP) = 
+        [(fromX, fromY + forward), (fromX - 1, fromY + forward), (fromX + 1, fromY + forward)]
+    -- * otherwise, player is currently playing a knight
+    | otherwise = 
+        [(fromX + 1, fromY + 2), (fromX + 1, fromY - 2), (fromX - 1, fromY - 2), (fromX -1, fromY +2), (fromX + 2, fromY + 1), (fromX + 2, fromY - 1), (fromX -2, fromY - 1), (fromX - 2, fromY + 1)]
+    where startPiece = getFromBoard board (fromX, fromY)
+          forward = case player of
+                        Black -> -1
+                        White -> 1
+
 ---Player Strategy functions-------------------------------------------------------
 
 greedy :: Chooser
 greedy a Normal b        = return (Just [(0,0),(1,1)]) -- ^ TODO: finish the functions for greedy strategy
 greedy a PawnPlacement b = return (Just [(2,2)])
-
-random :: Chooser
-random a Normal b        = return (Just [(0,0),(1,1)]) -- ^ TODO: finish the functions for random strategy
-random a PawnPlacement b = return (Just [(2,2)])
 
 ---2D list utility functions-------------------------------------------------------
 
