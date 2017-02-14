@@ -46,15 +46,17 @@ main = main' (unsafePerformIO getArgs)
 -}
 main'           :: [String] -> IO()
 main' args
+    -- * In the case that there are no input arguments, prompt user for strategy names 
     | lengthArgs == 0 = do
-        printDesc
+        -- * Prints description and prompts user to input the strategies for the black and white players
+        putStrLn "Possible strategies:"
+        putStr printStrategies
         askStrategies "black"
         askStrategies "white"
-        putStrLn "\nThe initial board:"
+        -- * Prints initial board
         print initBoard
-
-        putStrLn $ "\nThe initial board with back human (the placeholder for human) strategy having played one move\n"
-                   ++ "(clearly illegal as we must play in rounds!):"
+        --putStrLn $ "\nThe initial board with back human (the placeholder for human) strategy having played one move\n"
+        --           ++ "(clearly illegal as we must play in rounds!):"
         move <- human (initBoard) Normal Black
         putStrLn (show $ GameState (if move==Nothing
                                     then Passed
@@ -67,12 +69,13 @@ main' args
                                                        (getFromBoard (theBoard initBoard) ((fromJust move) !! 0)))
                                              ((fromJust move) !! 0)
                                              E))
+    -- | Takes two inputted strategy names from command line and checks if they're valid
+    --   it will then print out the initial state of the board
     | lengthArgs == 2 = do
-        putStrLn "\nin chosen strategy mode"
-        putStrLn "\ncheck the inputted strategies if valid\nand print initial board"
         blackStr <- checkStrategyValid getBlackStr
         whiteStr <- checkStrategyValid getWhiteStr
         print initBoard
+    -- * Otherwise, prints out the list of possible strategies
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
     where lengthArgs  = length args
           getBlackStr = map toLower (head args)
@@ -81,6 +84,8 @@ main' args
 ---User Prompt Functions------------------------------------------------------------
 
 -- | checks if the user's inputted strategy is valid
+--   if the inputted strategy is not "human", "random", or "greedy", the program will print the valid strategies
+--   and exit
 checkStrategyValid :: String -> IO(Chooser)
 checkStrategyValid "human" = return human  -- TODO: implement the game strategies
 checkStrategyValid "random" = return random -- and return it to the main function
@@ -90,16 +95,16 @@ checkStrategyValid x = die("\n" ++ x ++ " is an invalid strategy name. Valid lis
 -- | string of the list of available, playable strategies
 printStrategies :: String
 printStrategies = let strategies = ["human","random","greedy"]
-              in (foldr (++) "" ((map (\x -> "\n  " ++ x) strategies)))
+              in (foldr (++) "" ((map (\x -> "  " ++ x ++ "\n") strategies)))
 
 -- | prints a welcome message and the list of playable strategies in interactive mode
-printDesc :: IO()
-printDesc = putStrLn ("\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:" ++ printStrategies)
+--printDesc :: IO()
+--printDesc = putStrLn ("\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:")
 
 -- | (in interactive mode) prompts user to input a strategy
 askStrategies :: String -> IO(Chooser)
 askStrategies player = do 
-        putStrLn ("\nPlease enter a strategy for the " ++ player ++ " player: ")
+        putStrLn ("Please enter a strategy for the " ++ player ++ " player: ")
         strategyIn <- getLine
         strategy <- checkStrategyValid strategyIn
         return strategy
