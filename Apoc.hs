@@ -1,6 +1,6 @@
 {- |
 Module      : Main
-Description : Template to get you started on the CPSC 449 Winter 2016 Apocalypse assignment. 
+Description : Template to get you started on the CPSC 449 Winter 2016 Apocalypse assignment.
 Copyright   : Copyright 2016, Rob Kremer (rkremer@ucalgary.ca), University of Calgary.
 License     : Permission to use, copy, modify, distribute and sell this software
               and its documentation for any purpose is hereby granted without fee, provided
@@ -34,6 +34,7 @@ import System.Exit
 import ApocTools
 import ApocStrategyHuman
 import ApocStrategyRandom
+import Data.List
 
 ---Main-------------------------------------------------------------
 
@@ -48,10 +49,11 @@ main'           :: [String] -> IO()
 main' args
     | lengthArgs == 0 = do
         printDesc
-        askStrategies "black"
-        askStrategies "white"
+        blackStr <- askStrategies "black"
+        whiteStr <- askStrategies "white"
         putStrLn "\nThe initial board:"
         print initBoard
+        playGame initBoard blackStr whiteStr Black White
 
         putStrLn $ "\nThe initial board with back human (the placeholder for human) strategy having played one move\n"
                    ++ "(clearly illegal as we must play in rounds!):"
@@ -73,12 +75,36 @@ main' args
         blackStr <- checkStrategyValid getBlackStr
         whiteStr <- checkStrategyValid getWhiteStr
         print initBoard
+        --playGame
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
     where lengthArgs  = length args
           getBlackStr = map toLower (head args)
           getWhiteStr = map toLower (last args)
 
+
 ---User Prompt Functions------------------------------------------------------------
+
+-- | playGame: starts one game cycle
+playGame :: GameState -> Chooser -> Chooser -> Player -> Player -> Maybe Int
+playGame gamestate blackStr whiteStr black white = do
+    putStrLn board2Str
+    gameLoop gamestate blackStr whiteStr black white
+    --display
+    --get input
+    --check input
+    --update game state
+    --check if finished
+    --loop
+
+gameLoop :: GameState -> Chooser -> Chooser -> Player -> Player -> Maybe Int
+gameLoop gameState blackStr whiteStr black white = do
+    show gameState   --DISPLAY
+    --create new game state
+    getInput blackStr black     --GET INPUT, update game state with play type
+    getInput whiteStr white
+    updateGameState (theBoard gameState)    --UPDATE, gameboard passed and copied with updates from new game state
+    checkIfWon gameState black white
+    gameLoop gameState blackStr whiteStr black white  --LOOP IF NOT
 
 -- | checks if the user's inputted strategy is valid
 checkStrategyValid :: String -> IO(Chooser)
@@ -98,11 +124,64 @@ printDesc = putStrLn ("\nWelcome to the Apocalypse Simulator! Please choose a st
 
 -- | (in interactive mode) prompts user to input a strategy
 askStrategies :: String -> IO(Chooser)
-askStrategies player = do 
+askStrategies player = do
         putStrLn ("\nPlease enter a strategy for the " ++ player ++ " player: ")
         strategyIn <- getLine
         strategy <- checkStrategyValid strategyIn
         return strategy
+
+getInput :: Chooser -> Player ->IO()
+getInput strategy player
+    |strategy == human = getHumanInput player
+    |strategy = getComputerInput player
+
+getHumanInput :: Player -> String
+getHumanInput player = do
+        putStrLn ("\nPlease enter two numbers for piece coordinates, and two for its source")
+        srcdst <- getLine
+        return srcdst
+
+getComputerInput :: Chooser -> Player -> ((Int))
+getComputerInput str player = ((0, 0)(0, 0))
+
+updateGameState :: GameState -> Board -> GameState
+updateGameState currentState oldBoard = return currentState
+
+checkIfWon :: GameState -> Player -> Player
+checkIfWon gameState black white
+    |checkWin gameState black white == "Black" = exitBlackWins black   --EXIT IF WON
+    |checkWin gameState black white == "White" = exitWhiteWins white
+    |checkWin gameState black white == "Tie" = exit black white
+
+checkWin :: GameState -> Player -> Player -> String
+checkWin gamestate black white
+    |find WP (theBoard gamestate) == Nothing = return "Black"
+    |find BP (theBoard gamestate) == Nothing = return "White"
+    |(whitePen gamestate) == 2 = return "Black"
+    |(blackPen gamestate) == 2 = return "White"
+    |((blackPlay gamestate) == Passed) && ((whitePlay gamestate) == Passed) = pawnCount gamestate black white
+    |otherwise = return "Neither"
+
+pawnCount :: GameState -> Player -> Player -> Maybe Int
+pawnCount gamestate black white = do
+    numberOfWhitePawns <- length filter WP (theBoard gamestate)
+    numberOfBlackPawns <- length filter BP (theBoard gamestate)
+    comparePawns numberOfWhitePawns numberOfBlackPawns
+
+comparePawns :: Int -> Int -> String
+comparePawns numberOfWhitePawns numberOfBlackPawns
+    |numberOfWhitePawns > numberOfBlackPawns = return "White"
+    |numberOfBlackPawns > numberOfWhitePawns = return "Black"
+    |otherwise = return "Tie"
+
+exitBlackWins = do
+    die "Black has won!"
+
+exitWhiteWins = do
+    die "White has won!"
+
+exit = do
+    die "There was a tie"
 
 ---Movement Validation functions----------------------------------------------------
 
@@ -110,7 +189,7 @@ askStrategies player = do
 --   params: the board, player, start coordinates, end coordinates
 --   returns: boolean indicating if the indicated move is legal
 checkMoveLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
-checkMoveLegal board player start to 
+checkMoveLegal board player start to
     | (cell2Char startCell) == '_' = False
     | ((playerOf startPiece) == player) && (startCell == WP || startCell == BP) = checkPawnLegal board player start to
     | ((playerOf startPiece) == player) && (startCell == WK || startCell == BK) = checkKnightLegal board player start to
@@ -140,7 +219,7 @@ checkOpponent board player to =  (player /= getPlayer)
 checkPawnLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
 checkPawnLegal board player (fromX, fromY) to
     | (to == (fromX, fromY + forward)) && (checkEmptySpace board to)         = True -- ^ move to an empty space    ( 0,+1)
-    | to  == (fromX - 1, fromY + forward) && (checkOpponent board player to) = True -- ^ eat a piece to the left   (-1,+1)   
+    | to  == (fromX - 1, fromY + forward) && (checkOpponent board player to) = True -- ^ eat a piece to the left   (-1,+1)
     | to  == (fromX + 1, fromY + forward) && (checkOpponent board player to) = True -- ^ each a piece to the right (+1,+1)
     | otherwise = False
     where forward = case player of
@@ -162,42 +241,6 @@ checkKnightLegal board player (fromX, fromY) to
    | (to == (fromX - 2, fromY + 1)) && (checkTo) = True -- ^ (-2,+1)
    | otherwise = False
    where checkTo = ((checkEmptySpace board to) || (checkOpponent board player to))
-
----AI Movement functions-----------------------------------------------------------
-
--- | getPieces: gets list of playable pieces based on the player
---   params: the board, the player type
---   returns: list of tupbles indicating playable start sources
-getPieces :: Board -> Player -> [(Int, Int)]
-getPieces board White = getBoardPieces (\x -> x == WP || x == WK) board 0
-getPieces board Black = getBoardPieces (\x -> x == BP || x == BK) board 0
-
--- | getBoardPieces: gets all available board pieces
---   input: boolean function indicating which board piece is playable (white or black pieces), the board, starting row number
---   returns: list of tuples of playable pieces
-getBoardPieces :: (a -> Bool) -> [[a]] -> Int -> [(Int, Int)]
-getBoardPieces func [] _ = []
-getBoardPieces func (x:xs) row = (map (\x -> (x, row)) $ getRowPieces func x 0) ++ (getBoardPieces func xs (row + 1))
-
--- | getRowPieces: gets all playable pieces in a specific row (traverses through the column)
---   input: boolean function called from getBoardPieces, cell from board, (int) current column number
-getRowPieces :: (a -> Bool) -> [a] -> Int -> [Int]
-getRowPieces func [] _ = []
-getRowPieces func (x:xs) column = if func x then column:(getRowPieces func xs (column + 1)) else getRowPieces func xs (column + 1)
-
--- | getMoveList: gets the list of valid moves based on the current player's piece
-getMoveList :: Board -> Player -> (Int, Int) -> [(Int, Int)]
-getMoveList board player (fromX, fromY)
-    -- * player is currently playing a pawn
-    | (startPiece == WP) || (startPiece == BP) = 
-        [(fromX, fromY + forward), (fromX - 1, fromY + forward), (fromX + 1, fromY + forward)]
-    -- * otherwise, player is currently playing a knight
-    | otherwise = 
-        [(fromX + 1, fromY + 2), (fromX + 1, fromY - 2), (fromX - 1, fromY - 2), (fromX -1, fromY +2), (fromX + 2, fromY + 1), (fromX + 2, fromY - 1), (fromX -2, fromY - 1), (fromX - 2, fromY + 1)]
-    where startPiece = getFromBoard board (fromX, fromY)
-          forward = case player of
-                        Black -> -1
-                        White -> 1
 
 ---Player Strategy functions-------------------------------------------------------
 
