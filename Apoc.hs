@@ -15,8 +15,10 @@ Portability : ghc 7.10.2 - 7.10.3
 
 This module is used for CPSC 449 for the Apocalypse assignment.
 
-Feel free to modify this file as you see fit.
-
+Limitations : This implementation only implements the human strategy
+              Additionally, this implementation only prints out the initial board of the gameplay, and will not loop through an entire game
+              When in interactive mode, the program will print out the initial move as well as the board when a black player does its first move
+              (the move for the white player will not be prompted, and will result as a PASS)
 -}
 
 module Main (
