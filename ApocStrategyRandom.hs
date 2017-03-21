@@ -24,10 +24,10 @@ random gamestate PawnPlacement player = return (Just [(2,2)])
 -- then if the move if legal go make the move
 -- otherwise generate another move
 
-chooseRandom :: [a] -> IO Int
-chooseRandom list = do
-    index <- randomRIO (0, (length list) - 1)
-    return (list !! index)
+--chooseRandom :: [a] -> IO Int
+--chooseRandom list = do
+--    index <- randomRIO (0, (length list) - 1)
+--    return (list !! index)
 
 --chooseMove :: Board -> Player -> IO (Maybe [(Int, Int)])
 --chooseMove board player = do -- checks if a move can be made

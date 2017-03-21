@@ -93,7 +93,7 @@ intsToString x
 
 -- | simply converts a string input into a list of integers for input into other functions
 convertInput :: String -> [Int]
-convertInput xs = map (\x -> read[x] :: Int) (filter (\x -> isDigit x) xs)
+convertInput xs = map read $ words xs :: [Int] --map (\x -> read[x] :: Int) (filter (\x -> isDigit x) xs)
 
 -- | splits a list of integers into two distinct coordinates
 --   params: list of integers (should be length of 4)
