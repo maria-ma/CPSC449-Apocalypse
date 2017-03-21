@@ -106,6 +106,7 @@ listSplit [a,b,c,d] = Just [(a,b),(c,d)]
 --   params: list of integers
 --   returns: a boolean, true if the piece falls outside the board, false if its okay
 checkRange :: [Int] -> Bool
-checkRange moveCoord
-    | length (intersect [0,0,1,1,2,2,3,3,4,4] moveCoord) == length moveCoord = False -- ^ compare the length of the moveCoordinates to the length of the same list intersected
-    | otherwise = True                                                               -- ^with a list containing all possible numbers on the board [0, 1, 2, 3, 4], if they are the same, return False
+checkRange moveCoord 
+    | (head (sort moveCoord)) < 0 = True
+    | (last (sort moveCoord)) > 4 = True
+    | otherwise = False
