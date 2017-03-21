@@ -7,6 +7,8 @@ import ApocTools
 import AiFunctions
 import System.Random
 
+-- convert int to io (randio was io)
+
 random :: Chooser
 random gamestate Normal player        = return (Just [(0,0),(2,1)]) --do
 --    pieces <- getPieces (theBoard gamestate)(player)
@@ -22,7 +24,7 @@ random gamestate PawnPlacement player = return (Just [(2,2)])
 -- then if the move if legal go make the move
 -- otherwise generate another move
 
-chooseRandom :: [a] -> IO a
+chooseRandom :: [a] -> IO Int
 chooseRandom list = do
     index <- randomRIO (0, (length list) - 1)
     return (list !! index)
