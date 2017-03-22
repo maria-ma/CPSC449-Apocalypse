@@ -26,6 +26,7 @@ module ApocStrategyHuman (
 import ApocTools
 import Data.Char
 import Data.List
+import Data.Maybe
 
 {- | This is just a placeholder for the human strategy: it always chooses to play
      (0,0) to (2,1).
@@ -44,15 +45,18 @@ makePawnPlaceMove state player = do
     choice <- getLine
     let inputConverted = convertInput choice                 -- ^ converts input from a string to a list of ints
     let output = listSplit inputConverted                    -- ^ splits list into distinct sets of coordinates
-    if (checkRange inputConverted == True)                   -- ^ make sure the input is within range of the board
-        then do                                              -- ^ if not, re-run getting user input
-            putStrLn(choice ++ " integers out of range")
-            makeNormalMove state player
-        else if (length inputConverted /= 2)                 -- ^ will also check if the right number of inputs is inputted
-            then do
-            putStrLn(choice ++ " " ++ intsToString inputConverted ++ " integers found, 2 required.")
-            makeNormalMove state player
-            else return output                               -- ^ else, continue with the pawn placement
+    if (null inputConverted)
+        then do 
+            return output
+        else if (checkRange inputConverted == True)              -- ^ make sure the input is within range of the board
+            then do                                              -- ^ if not, re-run getting user input
+                putStrLn(choice ++ " integers out of range")
+                makeNormalMove state player
+            else if (length inputConverted /= 2)                 -- ^ will also check if the right number of inputs is inputted
+                then do
+                putStrLn(choice ++ " " ++ intsToString inputConverted ++ " integers found, 2 required.")
+                makeNormalMove state player
+                else return output                               -- ^ else, continue with the pawn placement
     where promptEnd = case player of
             White -> "W1"
             Black -> "B1"
@@ -67,15 +71,18 @@ makeNormalMove state player = do
     choice <- getLine
     let inputConverted = convertInput choice                 -- ^ converts input from a string to a list of ints
     let output = listSplit inputConverted                    -- ^ splits list into distinct sets of coordinates
-    if (checkRange inputConverted == True)                   -- ^ make sure the input is within range of the board
-        then do                                              -- ^ if not, re-run getting user input
-            putStrLn(choice ++ " integers out of range")
-            makeNormalMove state player
-        else if (length inputConverted /= 4)                 -- ^ will also check if the right number of inputs is inputted
+    if (null inputConverted)                                 -- ^ if the input is null, return the output (Nothing)
+        then do     
+            return output                                         
+        else if (checkRange inputConverted == True)          -- ^ make sure the input is within range of the board
             then do
-            putStrLn(choice ++ " " ++ intsToString inputConverted ++ " integers found, 4 required.")
-            makeNormalMove state player
-            else return output                               -- ^ else, continue with the move
+                putStrLn(choice ++ " integers out of range")
+                makeNormalMove state player                  -- ^ if not, re-run getting user input
+            else if (length inputConverted /= 4)             -- ^ will also check if the right number of inputs is inputted
+                then do
+                putStrLn(choice ++ " " ++ intsToString inputConverted ++ " integers found, 4 required.")
+                makeNormalMove state player
+                else return output                               -- ^ else, continue with the move
     where promptEnd = case player of
             White -> "W2"
             Black -> "B2"
@@ -93,7 +100,19 @@ intsToString x
 
 -- | simply converts a string input into a list of integers for input into other functions
 convertInput :: String -> [Int]
-convertInput xs = map (\x -> read[x] :: Int) (filter (\x -> isDigit x) xs)
+convertInput "" = []
+convertInput xs = do
+    if (isInfixOf "--" xs == True) 
+        then do
+            map read $ (take findComment $ words xs) :: [Int] --map (\x -> read[x] :: Int) (filter (\x -> isDigit x) xs)
+        else map read $ words xs :: [Int]
+    where findComment = fromJust $ elemIndex "--" (words xs)
+-- keep taking from the list until you encounter a freeline comment
+
+--findComment :: String -> Int
+--findComment x
+--    | isInfixOf "--" x
+--    | otherwise = False
 
 -- | splits a list of integers into two distinct coordinates
 --   params: list of integers (should be length of 4)

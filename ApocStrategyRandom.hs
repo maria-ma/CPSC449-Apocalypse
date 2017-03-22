@@ -10,11 +10,12 @@ import System.Random
 -- convert int to io (randio was io)
 
 random :: Chooser
-random gamestate Normal player        = return (Just [(0,0),(2,1)]) --do
---    pieces <- getPieces (theBoard gamestate)(player)
---    playPiece <- chooseRandom pieces
---    moves <- getMoveList (theBoard gamestate) player playPiece
---    (toX, toY) <- chooseRandom moves
+random gamestate Normal player        = do --return (Just [(0,0),(2,1)]) --do
+    let pieces = getPieces (theBoard gamestate)(player)
+    playPiece <- chooseRandom pieces
+    let moves = getMoveList (theBoard gamestate) player playPiece
+    (toX, toY) <- chooseRandom moves
+    return (Just [playPiece,(toX, toY)])
 random gamestate PawnPlacement player = return (Just [(2,2)])
 
 -- to do: get list of available moves
@@ -24,7 +25,7 @@ random gamestate PawnPlacement player = return (Just [(2,2)])
 -- then if the move if legal go make the move
 -- otherwise generate another move
 
-chooseRandom :: [a] -> IO Int
+chooseRandom :: [a] -> IO a
 chooseRandom list = do
     index <- randomRIO (0, (length list) - 1)
     return (list !! index)
