@@ -11,15 +11,17 @@ import System.Random
 -- | placePawn: for ai strategies when placing pawn
 --   finds the nearest empty space on the board and sets it to the pawn's destination
 placePawn :: Board -> Player -> Int -> Int -> (Int, Int)
-placePawn board player toX 5   = placePawn board player toX 0
+placePawn board player toX 5   = placePawn board player (toX+1) 0
 placePawn board player toX toY = if (getFromBoard board (toX, toY) == E) then (toX, toY) else placePawn board player toX (toY+1)
 
 -- | getPieces: gets list of playable pieces based on the player
 --   params: the board, the player type
 --   returns: list of tupbles indicating playable start sources
-getPieces :: Board -> Player -> [(Int, Int)]
-getPieces board White = getBoardPieces (\x -> x == WP || x == WK) board 0
-getPieces board Black = getBoardPieces (\x -> x == BP || x == BK) board 0
+getPieces :: Board -> Player -> PlayType -> [(Int, Int)]
+getPieces board White Normal = getBoardPieces (\x -> x == WP || x == WK) board 0
+getPieces board White PawnPlacement = getBoardPieces (\x -> x == WP) board 0
+getPieces board Black Normal = getBoardPieces (\x -> x == BP || x == BK) board 0
+getPieces board Black PawnPlacement = getBoardPieces (\x -> x == BP) board 0
 
 -- | getBoardPieces: gets all available board pieces
 --   input: boolean function indicating which board piece is playable (white or black pieces), the board, starting row number

@@ -43,8 +43,8 @@ makePawnPlaceMove state player = do
     -- * gets input from user
     putStrLn("Enter the coordinates to place the pawn for player " ++ (show player) ++ " in the form 'destX destY'\n[0 >= n >= 4] " ++ promptEnd ++ ":")
     choice <- getLine
-    let inputConverted = convertInput choice                 -- ^ converts input from a string to a list of ints
-    let output = listSplit inputConverted                    -- ^ splits list into distinct sets of coordinates
+    let inputConverted = convertInput choice                     -- ^ converts input from a string to a list of ints
+    let output = listSplit inputConverted                        -- ^ splits list into distinct sets of coordinates
     if (null inputConverted)
         then do 
             return output
@@ -82,7 +82,7 @@ makeNormalMove state player = do
                 then do
                 putStrLn(choice ++ " " ++ intsToString inputConverted ++ " integers found, 4 required.")
                 makeNormalMove state player
-                else return output                               -- ^ else, continue with the move
+                else return output                           -- ^ else, continue with the move
     where promptEnd = case player of
             White -> "W2"
             Black -> "B2"
@@ -99,26 +99,24 @@ intsToString x
     where ints = length x
 
 -- | simply converts a string input into a list of integers for input into other functions
+--   this also takes free-form comments into account
+--   params: a string user input indicating the coordinates they would like to move their piece to
+--   returns: a list of integers based on the input
 convertInput :: String -> [Int]
 convertInput "" = []
 convertInput xs = do
-    if (isInfixOf "--" xs == True) 
+    if (isInfixOf "--" xs == True)                            -- ^ first checks if a free form comment is in the input (signalled by "--")
         then do
-            map read $ (take findComment $ words xs) :: [Int] --map (\x -> read[x] :: Int) (filter (\x -> isDigit x) xs)
-        else map read $ words xs :: [Int]
+            map read $ (take findComment $ words xs) :: [Int] -- ^ converts the sting input into integer up until it encounters the comment signal
+        else map read $ words xs :: [Int]                     -- ^ if there's no free form comment, proceed as normal
     where findComment = fromJust $ elemIndex "--" (words xs)
--- keep taking from the list until you encounter a freeline comment
-
---findComment :: String -> Int
---findComment x
---    | isInfixOf "--" x
---    | otherwise = False
 
 -- | splits a list of integers into two distinct coordinates
---   params: list of integers (should be length of 4)
+--   params: list of integers (should be length of 2 or 4)
 --   returns: a list of lists of integers, split in half, if the list is 4 long
 listSplit :: [Int] -> Maybe [(Int, Int)]
 listSplit [] = Nothing
+listSplit [a, b] = Just [(a, b)]
 listSplit [a,b,c,d] = Just [(a,b),(c,d)]
 
 -- | checks to make sure a coordinate ot move to is in range of the game board (between 0 and 4)
