@@ -79,6 +79,7 @@ main' args
         blackStr <- checkStrategyValid getBlackStr
         whiteStr <- checkStrategyValid getWhiteStr
         print initBoard
+        -- pass vakues onto game loop here 
     -- * Otherwise, prints out the list of possible strategies
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
     where lengthArgs  = length args
@@ -115,13 +116,29 @@ askStrategies player = do
 
 ---Game Loop Functions-------------------------------------------------------------
 
--- gameLoop ::
+-- have to do: check the end game conditions (go to end game function)
+-- then check on the collisions and pawn placements
+-- check for goofs
+-- check for collisions
+-- and everything else
+-- print and go back to loop game 
 
----Player Strategy functions-------------------------------------------------------
+-- LOSE CONDITIONS
+-- One of the players loses all his/her pawns.  The other player is the winner. 
+-- One of the players accumulates two penalty points.  The other player is the winner.
+-- Both players pass on the same round. The one with the most pawns wins.
 
-greedy :: Chooser
-greedy a Normal b        = return (Just [(0,0),(1,1)]) -- ^ TODO: finish the functions for greedy strategy
-greedy a PawnPlacement b = return (Just [(2,2)])
+-- gameLoop :: GameState -> Chooser -> Chooser -> PlayType -> Bool -> IO()
+-- gameLoop currentBoard black white playType end = do
+    -- check if players lost all their pawns
+    --let findBlackPawns = findPawns (theBoard currentBoard) Black
+    --let findWhitePawns = findPawns (theBoard currentBoard) White
+
+    --if (end == False) then
+    --    do
+
+    --else 
+    --    do   
 
 ---2D list utility functions-------------------------------------------------------
 

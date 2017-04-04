@@ -49,3 +49,6 @@ getMoveList board player (fromX, fromY)
           forward = case player of
                         Black -> -1
                         White -> 1
+
+findPawns :: Board -> Player -> Bool
+findPawns board player = (length getPieces board player PawnPlacement) > 0
