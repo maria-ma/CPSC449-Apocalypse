@@ -36,6 +36,8 @@ import System.Exit
 import ApocTools
 import ApocStrategyHuman
 import ApocStrategyRandom
+import AiFunctions
+import MoveValidations
 
 ---Main-------------------------------------------------------------
 
@@ -53,8 +55,8 @@ main' args
         -- * Prints description and prompts user to input the strategies for the black and white players
         putStrLn "Possible strategies:"
         putStr printStrategies
-        askStrategies "black"
-        askStrategies "white"
+        blackStr <- askStrategies "black"
+        whiteStr <-askStrategies "white"
         -- * Prints initial board
         print initBoard
         --putStrLn $ "\nThe initial board with back human (the placeholder for human) strategy having played one move\n"
@@ -77,6 +79,7 @@ main' args
         blackStr <- checkStrategyValid getBlackStr
         whiteStr <- checkStrategyValid getWhiteStr
         print initBoard
+        -- pass vakues onto game loop here 
     -- * Otherwise, prints out the list of possible strategies
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
     where lengthArgs  = length args
@@ -90,7 +93,7 @@ main' args
 --   and exit
 checkStrategyValid :: String -> IO(Chooser)
 checkStrategyValid "human" = return human  -- TODO: implement the game strategies
-checkStrategyValid "random" = return random -- and return it to the main function
+checkStrategyValid "random" = return randomStr -- and return it to the main function
 checkStrategyValid "greedy" = return greedy -- (will be type Chooser)
 checkStrategyValid x = die("\n" ++ x ++ " is an invalid strategy name. Valid list of strategies:" ++ printStrategies)
 
@@ -111,70 +114,31 @@ askStrategies player = do
         strategy <- checkStrategyValid strategyIn
         return strategy
 
----Movement Validation functions----------------------------------------------------
+---Game Loop Functions-------------------------------------------------------------
 
--- | checkMoveLegal: checks if a normal move is legal
---   params: the board, player, start coordinates, end coordinates
---   returns: boolean indicating if the indicated move is legal
-checkMoveLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
-checkMoveLegal board player start to 
-    | (cell2Char startCell) == '_' = False
-    | ((playerOf startPiece) == player) && (startCell == WP || startCell == BP) = checkPawnLegal board player start to
-    | ((playerOf startPiece) == player) && (startCell == WK || startCell == BK) = checkKnightLegal board player start to
-    | otherwise = False
-    where startCell  = getFromBoard board start
-          startPiece = pieceOf startCell
+-- have to do: check the end game conditions (go to end game function)
+-- then check on the collisions and pawn placements
+-- check for goofs
+-- check for collisions
+-- and everything else
+-- print and go back to loop game 
 
--- | checkEmptySpace: checks if the destination coordinate is empty
---   (this function will also work for checking if a PawnPlacement move is legal
---   params: the board, destination coordinate
---   returns: boolean if the move was legal
-checkEmptySpace :: Board -> (Int, Int) -> Bool
-checkEmptySpace board x
-    | getFromBoard board x == E = True
-    | otherwise = False
+-- LOSE CONDITIONS
+-- One of the players loses all his/her pawns.  The other player is the winner. 
+-- One of the players accumulates two penalty points.  The other player is the winner.
+-- Both players pass on the same round. The one with the most pawns wins.
 
--- | checkOpponent: checks if the destination coordinate contains an opponent
---   params: board, current player, destination coordinate
---   returns: boolean if the destination coordinate contains an opponent piece
-checkOpponent :: Board -> Player -> (Int, Int) -> Bool
-checkOpponent board player to =  (player /= getPlayer)
-                                 where getPlayer = playerOf $ pieceOf $ getFromBoard board to
+-- gameLoop :: GameState -> Chooser -> Chooser -> PlayType -> Bool -> IO()
+-- gameLoop currentBoard black white playType end = do
+    -- check if players lost all their pawns
+    --let findBlackPawns = findPawns (theBoard currentBoard) Black
+    --let findWhitePawns = findPawns (theBoard currentBoard) White
 
--- | checkPawnLegal: checks if the player's intended pawn movement is valid
---   params: the board, current player, and the start and destination coordinates
---   returns: boolean on pawn movement validity
-checkPawnLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
-checkPawnLegal board player (fromX, fromY) to
-    | (to == (fromX, fromY + forward)) && (checkEmptySpace board to)         = True -- ^ move to an empty space    ( 0,+1)
-    | to  == (fromX - 1, fromY + forward) && (checkOpponent board player to) = True -- ^ eat a piece to the left   (-1,+1)   
-    | to  == (fromX + 1, fromY + forward) && (checkOpponent board player to) = True -- ^ each a piece to the right (+1,+1)
-    | otherwise = False
-    where forward = case player of
-                      Black -> -1
-                      White -> 1
+    --if (end == False) then
+    --    do
 
--- | checkKnightLegal: checks if the player's intended knight movement is valid
---   params: the board, curren player, start and end desination cell coordinates
---   returns: boolean on knight movement validity
-checkKnightLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
-checkKnightLegal board player (fromX, fromY) to
-   | (to == (fromX + 1, fromY + 2)) && (checkTo) = True -- ^ (+1,+2)
-   | (to == (fromX + 1, fromY - 2)) && (checkTo) = True -- ^ (+1,-2)
-   | (to == (fromX - 1, fromY - 2)) && (checkTo) = True -- ^ (-1,-2)
-   | (to == (fromX - 1, fromY + 2)) && (checkTo) = True -- ^ (-1,+2)
-   | (to == (fromX + 2, fromY + 1)) && (checkTo) = True -- ^ (+2,+1)
-   | (to == (fromX + 2, fromY - 1)) && (checkTo) = True -- ^ (+2,-1)
-   | (to == (fromX - 2, fromY - 1)) && (checkTo) = True -- ^ (-2,-1)
-   | (to == (fromX - 2, fromY + 1)) && (checkTo) = True -- ^ (-2,+1)
-   | otherwise = False
-   where checkTo = ((checkEmptySpace board to) || (checkOpponent board player to))
-
----Player Strategy functions-------------------------------------------------------
-
-greedy :: Chooser
-greedy a Normal b        = return (Just [(0,0),(1,1)]) -- ^ TODO: finish the functions for greedy strategy
-greedy a PawnPlacement b = return (Just [(2,2)])
+    --else 
+    --    do   
 
 ---2D list utility functions-------------------------------------------------------
 
