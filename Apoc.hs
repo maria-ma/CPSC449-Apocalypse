@@ -128,17 +128,54 @@ askStrategies player = do
 -- One of the players accumulates two penalty points.  The other player is the winner.
 -- Both players pass on the same round. The one with the most pawns wins.
 
--- gameLoop :: GameState -> Chooser -> Chooser -> PlayType -> Bool -> IO()
--- gameLoop currentBoard black white playType end = do
+gameLoop :: GameState -> Chooser -> Chooser -> PlayType -> Bool -> IO()
+gameLoop currentBoard black white playType end = do
+
     -- check if players lost all their pawns
-    --let findBlackPawns = findPawns (theBoard currentBoard) Black
-    --let findWhitePawns = findPawns (theBoard currentBoard) White
+    let findBlackPawns = findPawns (theBoard currentBoard) Black
+    let findWhitePawns = findPawns (theBoard currentBoard) White
+    -- check if players accumulated >2 penalty points
+    let blackMaxPenalty = currentBoard blackPen >= 2
+    let whiteMaxPenalty = currentBoard whitePen >= 2
 
-    --if (end == False) then
-    --    do
+    if (end == False) then
 
-    --else 
-    --    do   
+        -- check a player met a lose game condition
+        if (findBlackPawns == False || findWhitePawns == False || blackMaxPenalty == True || whiteMaxPenalty == True)
+          gameLoop currentBoard black white playType True
+
+        else
+            do
+                -- retrieve the black and white player's moves
+                blackMove <- black currentBoard playType Black
+                whiteMove <- white currentBoard playType White
+                -- check if both players passed (human players only)
+                if (blackMove == Nothing && whiteMove == Nothing)
+                    do
+                        show currentBoard
+                        gameLoop currentBoard black white playType True
+                --else 
+                -- get player's source coordinates
+                --let blackOrigin = blackMove !! 0
+                --let whiteOrigin = whiteMove !! 0
+                --let blackDest = blackMove !! 1
+                --let whiteDest = whiteMove !! 1
+
+                -- check for validity 
+                --let blackValid = checkMoveLegal currentBoard Black blackOrigin blackDest
+                --let whiteValid = checkMoveLegal currentBoard White whiteOrigin whiteDest
+
+                --if (blackValid == False || whiteValid == False)
+                --   if (blackValid == False)
+                --       do 
+                -- get msg to Goofed, show coords, increase penalty point for player
+                -- replace old piece with space
+                -- update old space with new coordinate
+
+    -- | end == True
+    --   in this case, find the winners and print out the game over message
+    else 
+        do   
 
 ---2D list utility functions-------------------------------------------------------
 
