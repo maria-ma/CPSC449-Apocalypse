@@ -45,8 +45,11 @@ randomStr gamestate PawnPlacement player = do --return (Just [(2,2)])
 -- | chooseRandom: chooses a random element from a given list
 chooseRandom :: [a] -> IO a
 chooseRandom list = do
-    index <- randomRIO (0, (length list))
+    index <- genIndex list
     return (list !! index)
+
+genIndex :: [a] -> IO Int
+genIndex list = getStdRandom (randomR (0, (length list) - 1))
 
 --chooseMove :: Board -> Player -> IO (Maybe [(Int, Int)])
 --chooseMove board player = do -- checks if a move can be made
