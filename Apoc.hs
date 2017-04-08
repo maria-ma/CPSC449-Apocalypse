@@ -36,6 +36,7 @@ import System.Exit
 import ApocTools
 import ApocStrategyHuman
 import ApocStrategyRandom
+import ApocStrategyGreedy
 import AiFunctions
 import MoveValidations
 
@@ -78,7 +79,8 @@ main' args
     | lengthArgs == 2 = do
         blackStr <- checkStrategyValid getBlackStr
         whiteStr <- checkStrategyValid getWhiteStr
-        print initBoard
+        gameLoop initBoard blackStr whiteStr Normal False
+    --    print initBoard
         -- pass vakues onto game loop here 
     -- * Otherwise, prints out the list of possible strategies
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
@@ -130,52 +132,158 @@ askStrategies player = do
 
 gameLoop :: GameState -> Chooser -> Chooser -> PlayType -> Bool -> IO()
 gameLoop currentBoard black white playType end = do
+    --  retrieve player's played move type
+    let blackMoveType = blackPlay currentBoard
+    let whiteMoveType = whitePlay currentBoard
 
-    -- check if players lost all their pawns
-    let findBlackPawns = findPawns (theBoard currentBoard) Black
-    let findWhitePawns = findPawns (theBoard currentBoard) White
-    -- check if players accumulated >2 penalty points
-    let blackMaxPenalty = currentBoard blackPen >= 2
-    let whiteMaxPenalty = currentBoard whitePen >= 2
+    -- print the current board first
+    putStrLn $ show currentBoard 
 
     if (end == False) then
+        do
+            -- check if players lost all their pawns
+            let findBlackPawns = findPawns (theBoard currentBoard) Black
+            let findWhitePawns = findPawns (theBoard currentBoard) White
+            -- check if players accumulated >2 penalty points
+            let blackMaxPenalty = blackPen currentBoard >= 2
+            let whiteMaxPenalty = whitePen currentBoard >= 2
 
-        -- check a player met a lose game condition
-        if (findBlackPawns == False || findWhitePawns == False || blackMaxPenalty == True || whiteMaxPenalty == True)
-          gameLoop currentBoard black white playType True
+            -- check a player met a lose game condition
+            if (findBlackPawns == False || findWhitePawns == False || blackMaxPenalty == True || whiteMaxPenalty == True) then
+              gameLoop currentBoard black white playType True
 
-        else
-            do
-                -- retrieve the black and white player's moves
-                blackMove <- black currentBoard playType Black
-                whiteMove <- white currentBoard playType White
-                -- check if both players passed (human players only)
-                if (blackMove == Nothing && whiteMove == Nothing)
-                    do
-                        show currentBoard
+            else
+                do
+                    -- retrieve the black and white player's moves
+                    blackMove <- black currentBoard playType Black
+                    whiteMove <- white currentBoard playType White
+                    -- check if both players passed (human players only)
+                    -- display current board and recurse back  
+                    if (blackMove == Nothing && whiteMove == Nothing) then
                         gameLoop currentBoard black white playType True
-                --else 
-                -- get player's source coordinates
-                --let blackOrigin = blackMove !! 0
-                --let whiteOrigin = whiteMove !! 0
-                --let blackDest = blackMove !! 1
-                --let whiteDest = whiteMove !! 1
-
-                -- check for validity 
-                --let blackValid = checkMoveLegal currentBoard Black blackOrigin blackDest
-                --let whiteValid = checkMoveLegal currentBoard White whiteOrigin whiteDest
-
-                --if (blackValid == False || whiteValid == False)
-                --   if (blackValid == False)
-                --       do 
-                -- get msg to Goofed, show coords, increase penalty point for player
-                -- replace old piece with space
-                -- update old space with new coordinate
+                    else 
+                        do
+                            -- TO DO: consider pawnplacement playtypes
+                            -- for now, this is the case for doing a NORMAL move
+                            -- make function that updates the values (make them a gamestate)
+                            let updatedGS = updateGS currentBoard playType blackMove whiteMove
+                            gameLoop updatedGS black white Normal False
 
     -- | end == True
     --   in this case, find the winners and print out the game over message
     else 
-        do   
+        do 
+            putStrLn "Game Over msg here"
+
+---Gamestate updating functions-----------------------------------------------------
+
+-- | updateGS: updates the game state based on the players' inputted moves
+--   params: the game state to update, current play type (normal/pawn placement), black player's move, white player's move
+updateGS :: GameState -> PlayType -> Maybe [(Int,Int)] -> Maybe [(Int,Int)] -> GameState
+updateGS toUpdate Normal blackMove whiteMove = do
+    -- * check for validity 
+    let blackValid = do
+        case blackMove of
+            Nothing -> True 
+            maybe -> checkMoveLegal (theBoard toUpdate) Black (head $ fromJust blackMove) (last $ fromJust blackMove)
+    let whiteValid = do
+        case whiteMove of
+            Nothing -> True 
+            maybe -> checkMoveLegal (theBoard toUpdate) White (head $ fromJust whiteMove) (last $ fromJust whiteMove)
+    -- * values to print in the updated and printed game board
+    let blackPlayType = do
+        case blackValid of
+            True -> if (blackMove == Nothing) then Passed else Played (head $ fromJust blackMove, last $ fromJust blackMove)
+            False -> Goofed (head $ fromJust blackMove, last $ fromJust blackMove)
+    let whitePlayType = do
+        case whiteValid of
+            True -> if (whiteMove == Nothing) then Passed else Played (head $ fromJust whiteMove, last $ fromJust whiteMove)
+            False -> Goofed (head $ fromJust whiteMove, last $ fromJust whiteMove)
+    -- * updates the penalty points
+    let blackNP = do
+        case blackValid of
+            True -> blackPen toUpdate
+            False -> (blackPen toUpdate) + 1
+    let whiteNP = do
+        case whiteValid of
+            True -> whitePen toUpdate
+            False -> (whitePen toUpdate) + 1
+    --  * updates the game state based on these updated values, also updating the board if the user does not goof up
+    if (blackPlayType == Goofed (head $ fromJust blackMove, last $ fromJust blackMove) || whitePlayType == Goofed (head $ fromJust whiteMove, last $ fromJust whiteMove)) then
+        GameState blackPlayType blackNP whitePlayType whiteNP (theBoard toUpdate)
+    else
+        GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType whitePlayType)
+
+-- TODO: pawn placement cases
+-- updateGS toUpdate PawnPlacement blackMove whiteMove = do
+
+-- | updateBoard updates the board based on the current play type (normal/pawn placement)
+--   and the player's played type (played/passed/etc)
+--   params: the game board, current play type, black player's played type, white player's played type
+updateBoard :: Board -> PlayType -> Played -> Played -> Board -- use IO (Maybe [(Int,Int)]) in case Played doesnt work
+-- * normal play type cases
+updateBoard toUpdate Normal Passed (Played whiteMove) = update1Player toUpdate Normal whiteMove
+updateBoard toUpdate Normal (Played blackMove) Passed = update1Player toUpdate Normal blackMove
+updateBoard toUpdate Normal (Played blackMove) (Played whiteMove) = update2Players toUpdate Normal blackMove whiteMove
+-- * TODO: pawn placement play type cases
+-- updateBoard toUpdate PawnPlacement Upgrade _ (and the reverse)
+-- updateBoard toUpdate PawnPlacement PlacedPawn _ (and the reverse)
+-- updateBoard toUpdate PawnPlacement BadPlacedPawn _ (and the reverse) -> no move actually happens, keep old board
+
+-- | update1Player: updates the game board when only one player is making a move
+--   params: the game board, current play type (normal/pawn placement), player's move
+update1Player :: Board -> PlayType -> ((Int, Int), (Int, Int)) -> Board
+update1Player toUpdate Normal playerMove = do
+    let tmp = updateDestCell toUpdate (fst playerMove) (snd playerMove) -- ^ temporary game state with new updated destinations set
+    clearCell tmp (fst playerMove)
+
+-- | update2Players: updates the board based on the two player's inputted moves
+--   params: the game board, current play type, black plater's move, white player's move
+update2Players :: Board -> PlayType -> ((Int, Int), (Int, Int)) -> ((Int, Int), (Int, Int)) -> Board
+update2Players toUpdate Normal blackMove whiteMove = do
+    let tmp = updateDestCell' toUpdate blackMove whiteMove   -- ^ updates the destination coordinates
+    let tmp2 = clearCell tmp (fst blackMove)                 -- ^ clears the players' starting coordinates
+    clearCell tmp2 (fst whiteMove)
+
+-- | clearCell: replaces the target coordinate into an empty cell in the board
+--   params: game board, coordinate to empty
+clearCell :: Board -> (Int, Int) -> Board
+clearCell board cell = replace2 board cell E
+
+-- | updateDestCell: updates game board with one destination coordinate 
+--   this happens when either only one player is making a move or two players are moving to separation destinations (no collisions)
+--   params: the game board, a player's start coordinates, and a player's destination coordinates
+updateDestCell :: Board -> (Int, Int) -> (Int, Int) -> Board
+updateDestCell toUpdate start dest
+    -- * this is when one player "captures" an opponent piece
+    | (startCell == WK || startCell == BK) && (destCell == WP || destCell == BP) = replace2 toUpdate dest startCell
+    -- * one player moves to a space where the piece they moving is the same as the piece on the destination, so it will be empty
+    | ((startCell == WK || startCell == BK) && (destCell == WK || destCell == BK)) || ((startCell == WP || startCell == BP) && (destCell == WP || destCell == BP)) = clearCell toUpdate dest
+    -- * player moves to an empty spot
+    | otherwise = replace2 toUpdate dest startCell
+    where startCell = getFromBoard toUpdate start
+          destCell  = getFromBoard toUpdate dest
+
+-- | updateDestCell': updates the game board with two destination coordinates
+--   this is the case where players are moving pieces at the same time
+--   params: the game board, the black player's move, the white player's move
+updateDestCell' :: Board -> ((Int, Int), (Int, Int)) -> ((Int, Int), (Int, Int)) -> Board
+updateDestCell' toUpdate blackMove whiteMove
+    -- * this is the case when both players have the same destination and are moving the same type of piece (pawn vs pawn or knight vs knight)
+    | (whiteDest == blackDest) && ((whiteSC == WK && blackSC == BK) || (whiteSC == WP && blackSC == BP)) = clearCell toUpdate whiteDest
+    -- * the following two cases are when the destinations are the same, but it's a knight vs pawn
+    | (whiteDest == blackDest) && (whiteSC == WK && blackSC == BP) = replace2 toUpdate whiteDest whiteSC
+    | (whiteDest == blackDest) && (whiteSC == WP && blackSC == BK) = replace2 toUpdate whiteDest blackSC
+    -- * otherwise, both players are moving to an empty space, so updateDestCell can be used
+    | otherwise = do
+        let tmp = updateDestCell toUpdate (fst blackMove) blackDest  -- ^ updates the destination cells as non-collisions 
+        updateDestCell tmp (fst whiteMove) whiteDest
+    where whiteDest = snd whiteMove                                  -- ^ destination coordinates
+          blackDest = snd blackMove
+          whiteSC = getFromBoard toUpdate $ fst whiteMove            -- ^ cells of players' stating coordinates
+          blackSC = getFromBoard toUpdate $ fst blackMove
+          whiteDC = getFromBoard toUpdate whiteDest                  -- ^ cells of players' destination coordinates
+          blackDC = getFromBoard toUpdate blackDest
 
 ---2D list utility functions-------------------------------------------------------
 

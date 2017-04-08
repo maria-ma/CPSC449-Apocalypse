@@ -51,4 +51,4 @@ getMoveList board player (fromX, fromY)
                         White -> 1
 
 findPawns :: Board -> Player -> Bool
-findPawns board player = (length getPieces board player PawnPlacement) > 0
+findPawns board player = (length $ getPieces board player PawnPlacement) > 0
