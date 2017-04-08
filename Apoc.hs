@@ -158,9 +158,27 @@ gameLoop currentBoard black white playType end = do
 
     -- | end == True
     --   in this case, find the winners and print out the game over message
+    --   draw conditions
     else 
         do 
-            putStrLn "Game Over msg here"
+            let gameOverMsg = getGameOverMsg black ((length $ getPieces (theBoard currentBoard) Black PawnPlacement)) (blackPen currentBoard) white ((length $ getPieces (theBoard currentBoard) White PawnPlacement)) (whitePen currentBoard)
+            putStrLn gameOverMsg
+
+getGameOverMsg :: Chooser -> Int -> Int -> Chooser -> Int -> Int -> String
+getGameOverMsg black blackPawns blackPenalty white whitePawns whitePenalty
+    | (blackPawns == whitePawns) && (blackPenalty == whitePenalty) = formatGOMsg "Game is a Draw!" (getStrName black) blackPawns (getStrName white) whitePawns
+    | (blackPenalty > 1) = formatGOMsg "White wins! (Because Black accumulated >1 penalty points.)" (getStrName black) blackPawns (getStrName white) whitePawns
+    | (whitePenalty > 1) = formatGOMsg "Black wins! (Because White accumulated >1 penalty points.)" (getStrName black) blackPawns (getStrName white) whitePawns
+    | (blackPawns == 0) || (blackPawns < whitePawns) = formatGOMsg "White wins!" (getStrName black) blackPawns (getStrName white) whitePawns
+    | (whitePawns == 0) || (blackPawns > whitePawns) = formatGOMsg "Black wins!" (getStrName black) blackPawns (getStrName white) whitePawns
+
+getStrName :: Chooser -> String
+getStrName human = "human"
+getStrName randomStr = "random"
+getStrName greedy = "greedy"
+
+formatGOMsg :: String -> String -> Int -> String -> Int -> String
+formatGOMsg winMsg blackStr blackPawns whiteStr whitePawns = winMsg ++ " Black (" ++ blackStr ++ "): " ++ (show blackPawns) ++ " White (" ++ whiteStr ++"): " ++ (show whitePawns)
 
 ---Gamestate updating functions-----------------------------------------------------
 
@@ -195,11 +213,16 @@ updateGS toUpdate Normal blackMove whiteMove = do
         case whiteValid of
             True -> whitePen toUpdate
             False -> (whitePen toUpdate) + 1
-    --  * updates the game state based on these updated values, also updating the board if the user does not goof up
-    if (blackPlayType == Goofed (head $ fromJust blackMove, last $ fromJust blackMove)) then
+    -- | updates the game state based on these updated values, also updating the board if the user does not goof up
+    -- * case 1: the both players goofed on the same round
+    if ((whitePlayType == Goofed (head $ fromJust whiteMove, last $ fromJust whiteMove)) && (blackPlayType == Goofed (head $ fromJust blackMove, last $ fromJust blackMove))) then
+        GameState blackPlayType blackNP whitePlayType whiteNP (theBoard toUpdate)  
+    -- * case 2 & 3: either the black player or the white player goof on a round
+    else if (blackPlayType == Goofed (head $ fromJust blackMove, last $ fromJust blackMove)) then
         GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal Passed whitePlayType)
     else if (whitePlayType == Goofed (head $ fromJust whiteMove, last $ fromJust whiteMove)) then
-        GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType Passed)
+        GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType Passed)  
+    -- * otherwise, proceed as a normal game 
     else
         GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType whitePlayType)
 
@@ -245,9 +268,7 @@ clearCell board cell = replace2 board cell E
 updateDestCell :: Board -> (Int, Int) -> (Int, Int) -> Board
 updateDestCell toUpdate start dest
     -- * this is when one player "captures" an opponent piece
-    | (startCell == WK || startCell == BK) && (destCell == WP || destCell == BP) = replace2 toUpdate dest startCell
-    -- * one player moves to a space where the piece they moving is the same as the piece on the destination, so it will be empty
-    | ((startCell == WK || startCell == BK) && (destCell == WK || destCell == BK)) || ((startCell == WP || startCell == BP) && (destCell == WP || destCell == BP)) = clearCell toUpdate dest
+    | ((startCell == WK || startCell == WP) && (destCell == BK || destCell == BP)) || ((startCell == BK || startCell == BP) && (destCell == WK || destCell == WP)) = replace2 toUpdate dest startCell
     -- * player moves to an empty spot
     | otherwise = replace2 toUpdate dest startCell
     where startCell = getFromBoard toUpdate start
