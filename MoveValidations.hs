@@ -32,9 +32,15 @@ checkEmptySpace board x
 -- | checkOpponent: checks if the destination coordinate contains an opponent
 --   params: board, current player, destination coordinate
 --   returns: boolean if the destination coordinate contains an opponent piece
-checkOpponent :: Board -> Player -> (Int, Int) -> Bool
-checkOpponent board player to =  (player /= getPlayer)
-                                 where getPlayer = playerOf $ pieceOf $ getFromBoard board to
+--(player /= getPlayer)
+--where getPlayer = playerOf $ pieceOf $ getFromBoard board to
+checkOpponent :: Board -> (Int, Int) -> (Int, Int) -> Bool
+checkOpponent board start dest
+    | (startCell == WP || startCell == WK) && (destCell == BP || destCell == BK) = True
+    | (startCell == BP || startCell == BK) && (destCell == WP || destCell == WK) = True
+    | otherwise = False
+    where startCell = getFromBoard board start
+          destCell = getFromBoard board dest
 
 -- | checkPawnLegal: checks if the player's intended pawn movement is valid
 --   params: the board, current player, and the start and destination coordinates
@@ -42,8 +48,8 @@ checkOpponent board player to =  (player /= getPlayer)
 checkPawnLegal :: Board -> Player -> (Int, Int) -> (Int, Int) -> Bool
 checkPawnLegal board player (fromX, fromY) to
     | (to == (fromX, fromY + forward)) && (checkEmptySpace board to)         = True -- ^ move to an empty space    ( 0,+1)
-    | to  == (fromX - 1, fromY + forward) && (checkOpponent board player to) = True -- ^ eat a piece to the left   (-1,+1)   
-    | to  == (fromX + 1, fromY + forward) && (checkOpponent board player to) = True -- ^ each a piece to the right (+1,+1)
+    | (to == (fromX - 1, fromY + forward)) && (checkOpponent board (fromX, fromY) to) = True -- ^ eat a piece to the left   (-1,+1)   
+    | (to == (fromX + 1, fromY + forward)) && (checkOpponent board (fromX, fromY) to) = True -- ^ each a piece to the right (+1,+1)
     | otherwise = False
     where forward = case player of
                       Black -> -1
@@ -63,4 +69,4 @@ checkKnightLegal board player (fromX, fromY) to
    | (to == (fromX - 2, fromY - 1)) && (checkTo) = True -- ^ (-2,-1)
    | (to == (fromX - 2, fromY + 1)) && (checkTo) = True -- ^ (-2,+1)
    | otherwise = False
-   where checkTo = ((checkEmptySpace board to) || (checkOpponent board player to))
+   where checkTo = ((checkEmptySpace board to) || (checkOpponent board (fromX, fromY) to))

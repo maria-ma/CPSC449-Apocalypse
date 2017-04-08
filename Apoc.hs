@@ -58,22 +58,7 @@ main' args
         putStr printStrategies
         blackStr <- askStrategies "black"
         whiteStr <-askStrategies "white"
-        -- * Prints initial board
-        print initBoard
-        --putStrLn $ "\nThe initial board with back human (the placeholder for human) strategy having played one move\n"
-        --           ++ "(clearly illegal as we must play in rounds!):"
-        move <- human (initBoard) Normal Black
-        putStrLn (show $ GameState (if move==Nothing
-                                    then Passed
-                                    else Played (head (fromJust move), head (tail (fromJust move))))
-                                   (blackPen initBoard)
-                                   (Passed)
-                                   (whitePen initBoard)
-                                   (replace2 (replace2 (theBoard initBoard)
-                                                       ((fromJust move) !! 1)
-                                                       (getFromBoard (theBoard initBoard) ((fromJust move) !! 0)))
-                                             ((fromJust move) !! 0)
-                                             E))
+        gameLoop initBoard blackStr whiteStr Normal False
     -- | Takes two inputted strategy names from command line and checks if they're valid
     --   it will then print out the initial state of the board
     | lengthArgs == 2 = do
@@ -160,7 +145,9 @@ gameLoop currentBoard black white playType end = do
                     -- check if both players passed (human players only)
                     -- display current board and recurse back  
                     if (blackMove == Nothing && whiteMove == Nothing) then
-                        gameLoop currentBoard black white playType True
+                        do
+                            let updatedGS = GameState Passed (blackPen currentBoard) Passed (whitePen currentBoard) (theBoard currentBoard)
+                            gameLoop updatedGS black white playType True
                     else 
                         do
                             -- TO DO: consider pawnplacement playtypes
@@ -209,8 +196,10 @@ updateGS toUpdate Normal blackMove whiteMove = do
             True -> whitePen toUpdate
             False -> (whitePen toUpdate) + 1
     --  * updates the game state based on these updated values, also updating the board if the user does not goof up
-    if (blackPlayType == Goofed (head $ fromJust blackMove, last $ fromJust blackMove) || whitePlayType == Goofed (head $ fromJust whiteMove, last $ fromJust whiteMove)) then
-        GameState blackPlayType blackNP whitePlayType whiteNP (theBoard toUpdate)
+    if (blackPlayType == Goofed (head $ fromJust blackMove, last $ fromJust blackMove)) then
+        GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal Passed whitePlayType)
+    else if (whitePlayType == Goofed (head $ fromJust whiteMove, last $ fromJust whiteMove)) then
+        GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType Passed)
     else
         GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType whitePlayType)
 
