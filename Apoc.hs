@@ -56,15 +56,22 @@ main' args
         -- * Prints description and prompts user to input the strategies for the black and white players
         putStrLn "Possible strategies:"
         putStr printStrategies
-        blackStr <- askStrategies "black"
-        whiteStr <-askStrategies "white"
-        gameLoop initBoard blackStr whiteStr Normal False
+        -- * Asking for black strategy
+        putStrLn ("Please enter a strategy for the black player: ")
+        blackSName <- getLine
+        blackStr <- checkStrategyValid blackSName
+        -- * Asking for white strategy
+        putStrLn ("Please enter a strategy for the white player: ")
+        whiteSName <- getLine
+        whiteStr <- checkStrategyValid whiteSName
+        gameLoop initBoard blackStr blackSName whiteStr whiteSName Normal False
     -- | Takes two inputted strategy names from command line and checks if they're valid
     --   it will then print out the initial state of the board
     | lengthArgs == 2 = do
-        blackStr <- checkStrategyValid getBlackStr
-        whiteStr <- checkStrategyValid getWhiteStr
-        gameLoop initBoard blackStr whiteStr Normal False
+        [blackSName, whiteSName] <- getArgs
+        blackStr <- checkStrategyValid blackSName
+        whiteStr <- checkStrategyValid whiteSName
+        gameLoop initBoard blackStr blackSName whiteStr whiteSName Normal False
     --    print initBoard
         -- pass vakues onto game loop here 
     -- * Otherwise, prints out the list of possible strategies
@@ -79,9 +86,9 @@ main' args
 --   if the inputted strategy is not "human", "random", or "greedy", the program will print the valid strategies
 --   and exit
 checkStrategyValid :: String -> IO(Chooser)
-checkStrategyValid "human" = return human  -- TODO: implement the game strategies
-checkStrategyValid "random" = return randomStr -- and return it to the main function
-checkStrategyValid "greedy" = return greedy -- (will be type Chooser)
+checkStrategyValid "human" =  return human  
+checkStrategyValid "random" = return randomStr
+checkStrategyValid "greedy" = return greedy
 checkStrategyValid x = die("\n" ++ x ++ " is an invalid strategy name. Valid list of strategies:" ++ printStrategies)
 
 -- | string of the list of available, playable strategies
@@ -114,9 +121,9 @@ askStrategies player = do
 -- One of the players loses all his/her pawns.  The other player is the winner. 
 -- One of the players accumulates two penalty points.  The other player is the winner.
 -- Both players pass on the same round. The one with the most pawns wins.
-
-gameLoop :: GameState -> Chooser -> Chooser -> PlayType -> Bool -> IO()
-gameLoop currentBoard black white playType end = do
+--gameLoop initBoard blackStr blackSName whiteStr whiteSName Normal False
+gameLoop :: GameState -> Chooser -> String -> Chooser -> String -> PlayType -> Bool -> IO()
+gameLoop currentBoard black blackStr white whiteStr playType end = do
     --  retrieve player's played move type
     let blackMoveType = blackPlay currentBoard
     let whiteMoveType = whitePlay currentBoard
@@ -135,7 +142,7 @@ gameLoop currentBoard black white playType end = do
 
             -- check a player met a lose game condition
             if (findBlackPawns == False || findWhitePawns == False || blackMaxPenalty == True || whiteMaxPenalty == True) then
-              gameLoop currentBoard black white playType True
+              gameLoop currentBoard black blackStr white whiteStr playType True
 
             else
                 do
@@ -147,35 +154,30 @@ gameLoop currentBoard black white playType end = do
                     if (blackMove == Nothing && whiteMove == Nothing) then
                         do
                             let updatedGS = GameState Passed (blackPen currentBoard) Passed (whitePen currentBoard) (theBoard currentBoard)
-                            gameLoop updatedGS black white playType True
+                            gameLoop updatedGS black blackStr white whiteStr playType True
                     else 
                         do
                             -- TO DO: consider pawnplacement playtypes
                             -- for now, this is the case for doing a NORMAL move
                             -- make function that updates the values (make them a gamestate)
                             let updatedGS = updateGS currentBoard playType blackMove whiteMove
-                            gameLoop updatedGS black white Normal False
+                            gameLoop updatedGS black blackStr white whiteStr Normal False
 
     -- | end == True
     --   in this case, find the winners and print out the game over message
     --   draw conditions
     else 
         do 
-            let gameOverMsg = getGameOverMsg black ((length $ getPieces (theBoard currentBoard) Black PawnPlacement)) (blackPen currentBoard) white ((length $ getPieces (theBoard currentBoard) White PawnPlacement)) (whitePen currentBoard)
+            let gameOverMsg = getGameOverMsg blackStr ((length $ getPieces (theBoard currentBoard) Black PawnPlacement)) (blackPen currentBoard) whiteStr ((length $ getPieces (theBoard currentBoard) White PawnPlacement)) (whitePen currentBoard)
             putStrLn gameOverMsg
 
-getGameOverMsg :: Chooser -> Int -> Int -> Chooser -> Int -> Int -> String
+getGameOverMsg :: String -> Int -> Int -> String -> Int -> Int -> String
 getGameOverMsg black blackPawns blackPenalty white whitePawns whitePenalty
-    | (blackPawns == whitePawns) && (blackPenalty == whitePenalty) = formatGOMsg "Game is a Draw!" (getStrName black) blackPawns (getStrName white) whitePawns
-    | (blackPenalty > 1) = formatGOMsg "White wins! (Because Black accumulated >1 penalty points.)" (getStrName black) blackPawns (getStrName white) whitePawns
-    | (whitePenalty > 1) = formatGOMsg "Black wins! (Because White accumulated >1 penalty points.)" (getStrName black) blackPawns (getStrName white) whitePawns
-    | (blackPawns == 0) || (blackPawns < whitePawns) = formatGOMsg "White wins!" (getStrName black) blackPawns (getStrName white) whitePawns
-    | (whitePawns == 0) || (blackPawns > whitePawns) = formatGOMsg "Black wins!" (getStrName black) blackPawns (getStrName white) whitePawns
-
-getStrName :: Chooser -> String
-getStrName human = "human"
-getStrName randomStr = "random"
-getStrName greedy = "greedy"
+    | (blackPawns == whitePawns) && (blackPenalty == whitePenalty) = formatGOMsg "Game is a Draw!" black blackPawns white whitePawns
+    | (blackPenalty > 1) = formatGOMsg "White wins! (Because Black accumulated >1 penalty points.)" black blackPawns white whitePawns
+    | (whitePenalty > 1) = formatGOMsg "Black wins! (Because White accumulated >1 penalty points.)" black blackPawns white whitePawns
+    | (blackPawns == 0) || (blackPawns < whitePawns) = formatGOMsg "White wins!" black blackPawns white whitePawns
+    | (whitePawns == 0) || (blackPawns > whitePawns) = formatGOMsg "Black wins!" black blackPawns white whitePawns
 
 formatGOMsg :: String -> String -> Int -> String -> Int -> String
 formatGOMsg winMsg blackStr blackPawns whiteStr whitePawns = winMsg ++ " Black (" ++ blackStr ++ "): " ++ (show blackPawns) ++ " White (" ++ whiteStr ++"): " ++ (show whitePawns)
@@ -253,9 +255,14 @@ update1Player toUpdate Normal playerMove = do
 --   params: the game board, current play type, black plater's move, white player's move
 update2Players :: Board -> PlayType -> ((Int, Int), (Int, Int)) -> ((Int, Int), (Int, Int)) -> Board
 update2Players toUpdate Normal blackMove whiteMove = do
-    let tmp = updateDestCell' toUpdate blackMove whiteMove   -- ^ updates the destination coordinates
-    let tmp2 = clearCell tmp (fst blackMove)                 -- ^ clears the players' starting coordinates
-    clearCell tmp2 (fst whiteMove)
+    -- * when both players collide, call the updateDestCell' function and clear the starting points after
+    if ((snd blackMove) == (snd whiteMove)) then
+        do
+            let tmp = updateDestCell' toUpdate blackMove whiteMove   -- ^ updates the destination coordinates
+            let tmp2 = clearCell tmp (fst blackMove)                 -- ^ clears the players' starting coordinates
+            clearCell tmp2 (fst whiteMove)
+    -- * otherwise, just call updateDestCell'
+    else updateDestCell' toUpdate blackMove whiteMove
 
 -- | clearCell: replaces the target coordinate into an empty cell in the board
 --   params: game board, coordinate to empty
@@ -284,11 +291,25 @@ updateDestCell' toUpdate blackMove whiteMove
     -- * the following two cases are when the destinations are the same, but it's a knight vs pawn
     | (whiteDest == blackDest) && (whiteSC == WK && blackSC == BP) = replace2 toUpdate whiteDest whiteSC
     | (whiteDest == blackDest) && (whiteSC == WP && blackSC == BK) = replace2 toUpdate whiteDest blackSC
-    -- * otherwise, both players are moving to an empty space, so updateDestCell can be used
+    -- * this is the case when the pieces are "swapped" together (both tried to eat each other)
+    | (whiteSrc == blackDest) && (blackSrc == whiteDest) = do
+        let tmp = replace2 toUpdate whiteDest whiteSC
+        replace2 tmp blackDest blackSC
+    -- * this is the case when the black player's destination is the same as the moving white pawn's starting coordinates
+    | (whiteSrc == blackDest) = do
+        let tmp = replace2 toUpdate whiteDest whiteSC
+        let tmp2 = clearCell tmp whiteSrc
+        let tmp3 = replace2 tmp2 blackDest blackSC
+        clearCell tmp3 blackSrc
+    -- * otherwise, both players are moving to an empty space or to an unmoved opponent, so updateDestCell can be used
     | otherwise = do
-        let tmp = updateDestCell toUpdate (fst blackMove) blackDest  -- ^ updates the destination cells as non-collisions 
-        updateDestCell tmp (fst whiteMove) whiteDest
-    where whiteDest = snd whiteMove                                  -- ^ destination coordinates
+        let tmp = updateDestCell toUpdate blackSrc blackDest  -- ^ updates the destination cells as non-collisions 
+        let tmp2 = clearCell tmp blackSrc
+        let tmp3 = updateDestCell tmp2 whiteSrc whiteDest
+        clearCell tmp3 whiteSrc
+    where whiteSrc = fst whiteMove                                   -- ^ start coordinates
+          blackSrc = fst blackMove
+          whiteDest = snd whiteMove                                  -- ^ destination coordinates
           blackDest = snd blackMove
           whiteSC = getFromBoard toUpdate $ fst whiteMove            -- ^ cells of players' stating coordinates
           blackSC = getFromBoard toUpdate $ fst blackMove
