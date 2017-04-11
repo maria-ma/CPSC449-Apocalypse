@@ -31,6 +31,7 @@ import Data.Maybe
 {- | This is just a placeholder for the human strategy: it always chooses to play
      (0,0) to (2,1).
 -}
+
 human    :: Chooser
 human state Normal player = makeNormalMove state player
 human state PawnPlacement player = makePawnPlaceMove state player
