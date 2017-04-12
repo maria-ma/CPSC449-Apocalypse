@@ -130,7 +130,7 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
 
     -- print the current board first
     putStrLn $ show currentBoard 
-
+-- ===============================================================================================================  --
     if (end == False) then
         do
             -- check if players lost all their pawns
@@ -141,14 +141,14 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
             let whiteMaxPenalty = whitePen currentBoard >= 2
 
             -- check a player met a lose game condition
-            if (findBlackPawns == False || findWhitePawns == False || blackMaxPenalty == True || whiteMaxPenalty == True) then
-              gameLoop currentBoard black blackStr white whiteStr playType True
-
-            else
+            if (findBlackPawns == True || findWhitePawns == True || blackMaxPenalty == False || whiteMaxPenalty == False) then
                 do
                     -- retrieve the black and white player's moves
+                  
                     blackMove <- black currentBoard playType Black
                     whiteMove <- white currentBoard playType White
+                    
+                    let updatedGS = updateGS currentBoard playType blackMove whiteMove
                     -- check if both players passed (human players only)
                     -- display current board and recurse back  
                     if (blackMove == Nothing && whiteMove == Nothing) then
@@ -156,13 +156,51 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
                             let updatedGS = GameState Passed (blackPen currentBoard) Passed (whitePen currentBoard) (theBoard currentBoard)
                             gameLoop updatedGS black blackStr white whiteStr playType True
                     else 
-                        do
+                        do  
                             -- TO DO: consider pawnplacement playtypes
                             -- for now, this is the case for doing a NORMAL move
                             -- make function that updates the values (make them a gamestate)
-                            let updatedGS = updateGS currentBoard playType blackMove whiteMove
-                            gameLoop updatedGS black blackStr white whiteStr Normal False
-
+                            
+                            -- Normal Playtype
+                            if ((numInRow BP $ (theBoard updatedGS)!!0) == 0 ) && ((numInRow WP $ (theBoard updatedGS)!!4) == 0) then
+                                do
+                                  --  let updatedGS = updateGS currentBoard playType blackMove whiteMove
+                                    gameLoop updatedGS black blackStr white whiteStr Normal False
+                            -- PawnPlacement
+                            else 
+                                do
+                                    putStrLn $ show updatedGS 
+                                    if ((numInRow BP $ (theBoard updatedGS)!!0) > 0) && ((numOnBoard BK (theBoard updatedGS) < 2)) then
+                                        do
+                                            putStrLn "black needs promotion"
+                                            let updatedGS' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (head (theBoard updatedGS)) True False 0)
+                                            gameLoop updatedGS' black blackStr white whiteStr Normal False
+                                    else if ((numInRow BP $ (theBoard updatedGS)!!0) > 0) && ((numOnBoard BK (theBoard updatedGS) == 2)) then
+                                        do
+                                            putStrLn "black needs placement"
+                                            blackMove <- black currentBoard PawnPlacement Black
+                                            let updatedGS' = updatePP updatedGS blackMove whiteMove True False
+                                            gameLoop updatedGS' black blackStr white whiteStr Normal False
+                                    else if ((numInRow WP $ (theBoard updatedGS)!!4) > 0) && ((numOnBoard WK (theBoard updatedGS) < 2)) then
+                                        do
+                                            putStrLn "white needs promotion"
+                                            let updatedGS' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (last (theBoard updatedGS)) False True 0)
+                                            gameLoop updatedGS' black blackStr white whiteStr Normal False
+                                     else if ((numInRow WP $ (theBoard updatedGS)!!4) > 0) && ((numOnBoard WK (theBoard updatedGS) == 2)) then
+                                        do
+                                            putStrLn "white needs placement"
+                                            let updatedGS' = updatePP updatedGS blackMove whiteMove False True
+                                            gameLoop updatedGS' black blackStr white whiteStr Normal False 
+                                    else 
+                                        do  
+                                            putStrLn "both needs promotion"
+                                            let updatedGS' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (head (theBoard updatedGS)) True False 0) 
+                                            let updatedGS'' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (last (theBoard updatedGS')) False True 0) 
+                                            gameLoop updatedGS'' black blackStr white whiteStr Normal False
+                                   
+                                   
+            else
+                return ()
     -- | end == True
     --   in this case, find the winners and print out the game over message
     --   draw conditions
@@ -228,33 +266,89 @@ updateGS toUpdate Normal blackMove whiteMove = do
     else
         GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType whitePlayType)
 
+findPawnPromote :: [Cell] -> Bool -> Bool -> Int -> (Int, Int)
+findPawnPromote (x:xs) True white startCoord
+    | (x == BP) = (startCoord, 0)
+    | otherwise = findPawnPromote xs True white (startCoord + 1)
+findPawnPromote (x:xs) black True startCoord
+    | (x == WP) = (startCoord, 4)
+    | otherwise = findPawnPromote xs black True (startCoord + 1)
+
+
+promotePawn :: GameState -> Board -> (Int, Int) -> GameState
+promotePawn toUpdate board coord
+    | ((getFromBoard board coord) == BP) = do
+        let newBoard = replace2 board coord BK
+        GameState (UpgradedPawn2Knight coord) (blackPen toUpdate) (None) (whitePen toUpdate) newBoard
+    | otherwise = do
+        let newBoard = replace2 board coord WK
+        GameState (None) (blackPen toUpdate) (UpgradedPawn2Knight coord) (whitePen toUpdate) newBoard 
 -- TODO: pawn placement cases
 -- updateGS toUpdate PawnPlacement blackMove whiteMove = do
+
+updatePP :: GameState -> Maybe [(Int,Int)] -> Maybe [(Int,Int)] -> Bool -> Bool -> GameState 
+updatePP toUpdate blackMove whiteMove isBlack isWhite = do
+    let blackValid = do
+        case blackMove of
+            Nothing -> if (isBlack == True) then False else True 
+            maybe -> checkEmptySpace (theBoard toUpdate) (last $ fromJust blackMove)
+    let whiteValid = do
+        case whiteMove of
+            Nothing -> if (isWhite == True) then True else False  
+            maybe -> checkEmptySpace (theBoard toUpdate) (last $ fromJust whiteMove)
+    let blackPlayType = do
+        case blackValid of
+            True ->  if (isBlack == True) then PlacedPawn (head $ fromJust blackMove, last $ fromJust blackMove) else None
+            False -> NullPlacedPawn 
+    let whitePlayType = do
+        case whiteValid of
+            True ->  if (isWhite == True) then PlacedPawn (head $ fromJust whiteMove, last $ fromJust whiteMove) else None
+            False -> NullPlacedPawn 
+    let blackNP = do
+        case blackValid of
+            True -> blackPen toUpdate
+            False -> (blackPen toUpdate) + 1
+    let whiteNP = do
+        case whiteValid of
+            True -> whitePen toUpdate
+            False -> (whitePen toUpdate) + 1
+            
+    if (blackPlayType == NullPlacedPawn) then
+        -- white should be (none, pp)
+       GameState blackPlayType blackNP whitePlayType whiteNP (theBoard toUpdate)  
+            -- * case 2 & 3: either the black player or the white player goof on a round
+    else if (whitePlayType == NullPlacedPawn) then
+       -- black should be (none, pp)
+       GameState blackPlayType blackNP whitePlayType whiteNP (theBoard toUpdate) 
+            -- * otherwise, proceed as a normal game 
+    else 
+       GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType whitePlayType)
+
 
 -- | updateBoard updates the board based on the current play type (normal/pawn placement)
 --   and the player's played type (played/passed/etc)
 --   params: the game board, current play type, black player's played type, white player's played type
 updateBoard :: Board -> PlayType -> Played -> Played -> Board -- use IO (Maybe [(Int,Int)]) in case Played doesnt work
 -- * normal play type cases
-updateBoard toUpdate Normal Passed (Played whiteMove) = update1Player toUpdate Normal whiteMove
-updateBoard toUpdate Normal (Played blackMove) Passed = update1Player toUpdate Normal blackMove
-updateBoard toUpdate Normal (Played blackMove) (Played whiteMove) = update2Players toUpdate Normal blackMove whiteMove
+updateBoard toUpdate Normal Passed (Played whiteMove) = update1Player toUpdate whiteMove
+updateBoard toUpdate Normal (Played blackMove) Passed = update1Player toUpdate blackMove
+updateBoard toUpdate Normal (Played blackMove) (Played whiteMove) = update2Players toUpdate blackMove whiteMove
 -- * TODO: pawn placement play type cases
--- updateBoard toUpdate PawnPlacement Upgrade _ (and the reverse)
--- updateBoard toUpdate PawnPlacement PlacedPawn _ (and the reverse)
--- updateBoard toUpdate PawnPlacement BadPlacedPawn _ (and the reverse) -> no move actually happens, keep old board
+updateBoard toUpdate PawnPlacement (PlacedPawn blackMove) (PlacedPawn whiteMove) = update2Players toUpdate blackMove whiteMove
+updateBoard toUpdate PawnPlacement (PlacedPawn blackMove) _ = update1Player toUpdate blackMove
+updateBoard toUpdate PawnPlacement _ (PlacedPawn whiteMove) = update1Player toUpdate whiteMove
 
 -- | update1Player: updates the game board when only one player is making a move
 --   params: the game board, current play type (normal/pawn placement), player's move
-update1Player :: Board -> PlayType -> ((Int, Int), (Int, Int)) -> Board
-update1Player toUpdate Normal playerMove = do
+update1Player :: Board -> ((Int, Int), (Int, Int)) -> Board
+update1Player toUpdate playerMove = do
     let tmp = updateDestCell toUpdate (fst playerMove) (snd playerMove) -- ^ temporary game state with new updated destinations set
     clearCell tmp (fst playerMove)
 
 -- | update2Players: updates the board based on the two player's inputted moves
 --   params: the game board, current play type, black plater's move, white player's move
-update2Players :: Board -> PlayType -> ((Int, Int), (Int, Int)) -> ((Int, Int), (Int, Int)) -> Board
-update2Players toUpdate Normal blackMove whiteMove = do
+update2Players :: Board -> ((Int, Int), (Int, Int)) -> ((Int, Int), (Int, Int)) -> Board
+update2Players toUpdate blackMove whiteMove = do
     -- * when both players collide, call the updateDestCell' function and clear the starting points after
     if ((snd blackMove) == (snd whiteMove)) then
         do
@@ -315,6 +409,21 @@ updateDestCell' toUpdate blackMove whiteMove
           blackSC = getFromBoard toUpdate $ fst blackMove
           whiteDC = getFromBoard toUpdate whiteDest                  -- ^ cells of players' destination coordinates
           blackDC = getFromBoard toUpdate blackDest
+
+-- CHECK PIECES FOR PAWNPLACEMENT--
+--CHECK PAWNS IN ROWS ---
+
+-- | The number of a certain Cell in a list of cells.
+numInRow :: Cell -> [Cell] -> Int 
+numInRow _ [] = 0
+numInRow cell (x:xs) 
+   | cell == x = 1 + numInRow cell xs
+   | otherwise = numInRow cell xs
+
+-- | The number of a certain Cell on the board. e.g. the number of black pawns.
+numOnBoard :: Cell -> Board -> Int
+numOnBoard cell (xs:[]) = numInRow cell xs
+numOnBoard cell (xs:xss) = numInRow cell xs + numOnBoard cell xss  
 
 ---2D list utility functions-------------------------------------------------------
 
