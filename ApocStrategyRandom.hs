@@ -24,27 +24,30 @@ randomStr gamestate Normal player        = do -- return (Just [(0,0),(2,1)]) --d
     let moves = getMoveList board player playPiece
     --putStrLn "tryna get random move from play piece"
     --randNum2 <- genIndex moves
-    (toX, toY) <- chooseRandom moves 
-    --putStrLn ("length of list: " ++ (show $ length moves) ++ " index num: " ++  (show randNum2) ++ " chosen: " ++ (show (toX, toY)))
-
-    -- * checking if the given destination coordinates are valid
-    --   first check the range
-    if (checkCoordRange toX toY == False) then randomStr gamestate Normal player
-        -- checking if the intended pawn move is legal
-        else if (((getFromBoard board playPiece == WP) || (getFromBoard board playPiece == BP)) && (checkPawnLegal board player playPiece (toX, toY) == True))
-            then return (Just [playPiece,(toX, toY)])
-            -- * checking if the intended knight move is legal
-            else if (((getFromBoard board playPiece == WK) || (getFromBoard board playPiece == BK)) && (checkKnightLegal board player playPiece (toX, toY) == True))
-                then return (Just [playPiece,(toX, toY)])
-                -- * otherwise, generate a new move
-                else randomStr gamestate Normal player
+    if (length moves == 0) then return Nothing
+    else 
+        do
+            (toX, toY) <- chooseRandom moves 
+            --putStrLn ("length of list: " ++ (show $ length moves) ++ " index num: " ++  (show randNum2) ++ " chosen: " ++ (show (toX, toY)))
+            -- !!!!!!!!!!!! pass on turn if length moves == 0 (nreturn nothing) !!!!!!!!!!!!!!
+            -- * checking if the given destination coordinates are valid
+            --   first check the range
+            if (checkCoordRange toX toY == False) then randomStr gamestate Normal player
+                -- checking if the intended pawn move is legal
+                else if (((getFromBoard board playPiece == WP) || (getFromBoard board playPiece == BP)) && (checkPawnLegal board player playPiece (toX, toY) == True))
+                    then return (Just [playPiece,(toX, toY)])
+                    -- * checking if the intended knight move is legal
+                    else if (((getFromBoard board playPiece == WK) || (getFromBoard board playPiece == BK)) && (checkKnightLegal board player playPiece (toX, toY) == True))
+                        then return (Just [playPiece,(toX, toY)])
+                        -- * otherwise, generate a new move
+                        else randomStr gamestate Normal player
     where board = (theBoard gamestate)
 -- * PawnPlacement playtype returns a cell on the board indicating the nearest empty space a pawn can go to
 randomStr gamestate PawnPlacement player = do --return (Just [(2,2)])
-    let pieces = getPieces (theBoard gamestate) player PawnPlacement
-    playPiece <- chooseRandom pieces
-    let move = placePawn (theBoard gamestate) player 0 0
-    return (Just [playPiece, move])
+    let emptySpaces = getEmpty (theBoard gamestate)
+    playPiece <- chooseRandom emptySpaces
+--    let move = placePawn (theBoard gamestate) player 0 0
+    return (Just [playPiece])
 
 -- | checkCoordRange: range checks the destination coordinates
 --   if an x or y coordinate is either >4 or <0, then return false
