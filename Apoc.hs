@@ -204,10 +204,16 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
                                                                     maybe -> updatePP updatedGS' (getPawnPlace (blackPlay updatedGS')) (Just [(findPawnPromote (last (theBoard updatedGS')) False True 0), (head $ fromJust whiteMove)]) False True
                                                             let finalUpdate = GameState (blackPlay updatedGS') (blackPen updatedGS') (whitePlay updatedGS'') (whitePen updatedGS'') (theBoard updatedGS'')  
                                                             gameLoop finalUpdate black blackStr white whiteStr Normal False
+                                            -- | The following cases are when only ONE player needs a pawn promotion or placement 
+                                            --   the game state will thus updated based on: 
+                                            --       (1-2) either a black or white player needing a pawn placement
+                                            --       (3-4) either a black or white player needing a pawn promotion
+                                            -- * case 5: a black pawn needs a promotion
                                             else if ((numInRow BP $ (theBoard updatedGS)!!0) > 0) && ((numOnBoard BK (theBoard updatedGS) < 2)) then
                                                 do
                                                     let updatedGS' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (head (theBoard updatedGS)) True False 0)
                                                     gameLoop updatedGS' black blackStr white whiteStr Normal False
+                                            -- * case 6: a black pawn needs a placement
                                             else if ((numInRow BP $ (theBoard updatedGS)!!0) > 0) && ((numOnBoard BK (theBoard updatedGS) == 2)) then
                                                 do
                                                     blackMove <- black currentBoard PawnPlacement Black
@@ -216,10 +222,12 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
                                                             Nothing -> updatePP updatedGS Nothing Nothing True False
                                                             maybe -> updatePP updatedGS (Just [(findPawn (theBoard updatedGS) True (0,0)), (head $ fromJust blackMove)]) Nothing True False
                                                     gameLoop updatedGS' black blackStr white whiteStr Normal False
+                                            -- * case 7: a white pawn needs a promotion
                                             else if ((numInRow WP $ (theBoard updatedGS)!!4) > 0) && ((numOnBoard WK (theBoard updatedGS) < 2)) then
                                                 do
                                                     let updatedGS' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (last (theBoard updatedGS)) False True 0)
                                                     gameLoop updatedGS' black blackStr white whiteStr Normal False
+                                            -- * case 8: a white pawn needs a placement
                                             else if ((numInRow WP $ (theBoard updatedGS)!!4) > 0) && ((numOnBoard WK (theBoard updatedGS) == 2)) then
                                                 do
                                                     whiteMove <- white currentBoard PawnPlacement White
@@ -228,30 +236,40 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
                                                             Nothing -> updatePP updatedGS Nothing Nothing False True
                                                             maybe -> updatePP updatedGS Nothing (Just [(findPawnPromote (last (theBoard updatedGS)) False True 0), (head $ fromJust whiteMove)]) False True
                                                     gameLoop updatedGS' black blackStr white whiteStr Normal False 
+                                            -- * case 9: both players need a pawn promotion; since we have already covered this case, we can return nothing
                                             else return()
+                                    -- * if an end game condition has been met, recurse the loop with the updated game state,
+                                    --   as the beginning of the loop does check the end game conditions for the passed game state
                                     else gameLoop updatedGS black blackStr white whiteStr Normal False
-                                   
+            -- * if the current board meets the end game conditions, print out the game over message                 
             else
                 do 
                     let gameOverMsg = getGameOverMsg blackStr ((length $ getPieces (theBoard currentBoard) Black PawnPlacement)) (blackPen currentBoard) whiteStr ((length $ getPieces (theBoard currentBoard) White PawnPlacement)) (whitePen currentBoard)
                     putStrLn gameOverMsg
-
-    -- | end == True
-    --   in this case, find the winners and print out the game over message
-    --   draw conditions
+    -- * if the boolean indicating the end of the game has been true, print out the game over statement
     else 
         do 
             let gameOverMsg = getGameOverMsg blackStr ((length $ getPieces (theBoard currentBoard) Black PawnPlacement)) (blackPen currentBoard) whiteStr ((length $ getPieces (theBoard currentBoard) White PawnPlacement)) (whitePen currentBoard)
             putStrLn gameOverMsg
 
+-- | notEnd: checks if the current game state has NOT met any of the lose conditions, which are:
+--    (1) One of the players loses all his/her pawns.  The other player is the winner. 
+--    (2) One of the players accumulates two penalty points.  The other player is the winner.
+--   params: the current gamestate
 notEnd :: GameState -> Bool
-notEnd currentGame = let findBlackPawns = findPawns (theBoard currentGame) Black
-                         findWhitePawns = findPawns (theBoard currentGame) White
-                         -- check if players accumulated >2 penalty points
-                         blackMaxPenalty = blackPen currentGame >= 2
-                         whiteMaxPenalty = whitePen currentGame >= 2
+notEnd currentGame = let findBlackPawns = findPawns (theBoard currentGame) Black  -- ^ boolean function that checks if there are still black pawns on the board         
+                         findWhitePawns = findPawns (theBoard currentGame) White  -- ^ same as above, but for white pawns
+                         blackMaxPenalty = blackPen currentGame >= 2              -- ^ boolean function that checks if the number of black penalties exceeds 2
+                         whiteMaxPenalty = whitePen currentGame >= 2              -- ^ same as above, but for white penalties
                     in ((findBlackPawns == True && findWhitePawns == True) && (blackMaxPenalty == False && whiteMaxPenalty == False))
 
+-- | getGameOverMsg: sets the game over message to print when the game is over
+--   changes the game over message based on: 
+--       (1) if there is a draw [same number of pawns and penalties]
+--       (2) who exceeded the maximum number of penalties first
+--       (3) who has the least number of pawns on the board
+--   params: the black strategy name, the number of black pawns, the number of black penalties
+--           the white strategy name, the number of white pawns, the number of white penalties
 getGameOverMsg :: String -> Int -> Int -> String -> Int -> Int -> String
 getGameOverMsg black blackPawns blackPenalty white whitePawns whitePenalty
     | (blackPawns == whitePawns) && ((blackPenalty == whitePenalty) || (blackPenalty < 2) || (whitePenalty < 2)) = formatGOMsg "Game is a Draw!" black blackPawns white whitePawns
@@ -260,7 +278,9 @@ getGameOverMsg black blackPawns blackPenalty white whitePawns whitePenalty
     | (blackPawns == 0) || (blackPawns < whitePawns) = formatGOMsg "White wins!" black blackPawns white whitePawns
     | (whitePawns == 0) || (blackPawns > whitePawns) = formatGOMsg "Black wins!" black blackPawns white whitePawns
 
-
+-- | formatGameOverMsg: formats the game over message based on the parameters passed to the <getGameOverMsg> function
+--   prints as: [Winner/Draw!] [additional reasoning if by penalty]  Black ([black strategy]): [#Black Pawns]  White ([white strategy]): [#White Pawns]
+--   params: winner message, black strategy name, number of black pawns, white strategy name, number of white pawns
 formatGOMsg :: String -> String -> Int -> String -> Int -> String
 formatGOMsg winMsg blackStr blackPawns whiteStr whitePawns = winMsg ++ "  Black (" ++ blackStr ++ "): " ++ (show blackPawns) ++ "  White (" ++ whiteStr ++"): " ++ (show whitePawns)
 
