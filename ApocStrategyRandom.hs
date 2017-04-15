@@ -15,36 +15,48 @@ import MoveValidations
 
 randomStr :: Chooser
 -- * Normal playtype returns the source and destination coordinates of a player's move
-randomStr gamestate Normal player        = do -- return (Just [(0,0),(2,1)]) --do
+randomStr gamestate Normal player        = do 
+    -- | gets all the pieces that the player can play from the board
     let pieces = getPieces board (player) Normal
-    --putStrLn "tryna get random play piece"
-    --randNum <- genIndex pieces
+    -- | chooses a random element from the list of pieces the player can play
     playPiece <- chooseRandom pieces
-    --putStrLn ("length of list: " ++ (show $ length pieces) ++ " index num: " ++  (show randNum) ++ " chosen: " ++ (show playPiece))
+    
+    -- | gets the movelist and the possible moves of the piece that is being played
     let moves = getMoveList board player playPiece
-    --putStrLn "tryna get random move from play piece"
-    --randNum2 <- genIndex moves
-    (toX, toY) <- chooseRandom moves 
-    --putStrLn ("length of list: " ++ (show $ length moves) ++ " index num: " ++  (show randNum2) ++ " chosen: " ++ (show (toX, toY)))
-
-    -- * checking if the given destination coordinates are valid
-    --   first check the range
-    if (checkCoordRange toX toY == False) then randomStr gamestate Normal player
-        -- checking if the intended pawn move is legal
-        else if (((getFromBoard board playPiece == WP) || (getFromBoard board playPiece == BP)) && (checkPawnLegal board player playPiece (toX, toY) == True))
-            then return (Just [playPiece,(toX, toY)])
-            -- * checking if the intended knight move is legal
-            else if (((getFromBoard board playPiece == WK) || (getFromBoard board playPiece == BK)) && (checkKnightLegal board player playPiece (toX, toY) == True))
-                then return (Just [playPiece,(toX, toY)])
-                -- * otherwise, generate a new move
-                else randomStr gamestate Normal player
+    let possMoves = canMove board player playPiece moves
+    -- | if the length of the possible moves is 0, return Nothing (pass)
+    -- | else return a list of Int tuples
+    if (length possMoves == 0) then return Nothing
+    else 
+        do
+            move <- chooseRandom possMoves
+            return (Just [playPiece,move])
     where board = (theBoard gamestate)
+    
 -- * PawnPlacement playtype returns a cell on the board indicating the nearest empty space a pawn can go to
-randomStr gamestate PawnPlacement player = do --return (Just [(2,2)])
-    let pieces = getPieces (theBoard gamestate) player PawnPlacement
-    playPiece <- chooseRandom pieces
-    let move = placePawn (theBoard gamestate) player 0 0
-    return (Just [playPiece, move])
+randomStr gamestate PawnPlacement player = do 
+    -- | generates two random integers to be used as x and y coordinates
+    randX <- chooseRandom4
+    randY <- chooseRandom4   
+    let playPiece = (randX, randY)
+    -- | checks if the generated coordinate is an empty space on the board then return it
+    -- | else call the function again
+    if ((checkEmptySpace (theBoard gamestate) playPiece) == True) then return (Just [playPiece])
+    else randomStr gamestate PawnPlacement player
+
+
+-- | canMove: returns a list of possible moves the player can play
+canMove :: Board -> Player -> (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+canMove board player start [] = []
+canMove board player start (x:xs)
+    -- | check if the values are not out of range
+    -- | if true, check if the values are legal moves then add it to the list
+    -- | else move to the next value
+    | (checkCoordRange (fst x) (snd x) == True) = do 
+        if (checkMoveLegal board player start x == True) then x : canMove board player start xs
+        else canMove board player start xs
+    | otherwise = canMove board player start xs
+
 
 -- | checkCoordRange: range checks the destination coordinates
 --   if an x or y coordinate is either >4 or <0, then return false
@@ -59,6 +71,11 @@ chooseRandom :: [a] -> IO a
 chooseRandom list = do
     index <- randomRIO (0, (length list) - 1)
     return (list !! index)
+
+-- | generate a random number from 0 to 4.
+-- | the numbers generated will be used as coordiates
+chooseRandom4 :: IO Int
+chooseRandom4 = getStdRandom (randomR (0,4))
 
 --genIndex :: [a] -> IO Int
 --genIndex list = getStdRandom (randomR (0, (length list) - 1))
