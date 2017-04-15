@@ -1,3 +1,20 @@
+{- |
+Module      : Random Strategy Module
+Description : This module implements the random strategy for the AI
+Copyright   : Copyright 2017, Gil Abinal and Maria Mamaclay, University of Calgary.
+License     : Permission to use, copy, modify, distribute and sell this software
+              and its documentation for any purpose is hereby granted without fee, provided
+              that the above copyright notice appear in all copies and that both that
+              copyright notice and this permission notice appear in supporting
+              documentation. The University of Calgary makes no representations about the
+              suitability of this software for any purpose. It is provided "as is" without
+              express or implied warranty.
+Stability   : experimental
+Portability : ghc 7.10.2 - 7.10.3
+This module is used for CPSC 449 for the Apocalypse assignment.
+
+-}
+
 module ApocStrategyRandom  where
 
 import Data.Maybe (fromJust, isNothing)
