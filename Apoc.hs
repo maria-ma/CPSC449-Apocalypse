@@ -1,7 +1,7 @@
 {- |
 Module      : Main
-Description : Template to get you started on the CPSC 449 Winter 2016 Apocalypse assignment. 
-Copyright   : Copyright 2016, Rob Kremer (rkremer@ucalgary.ca), University of Calgary.
+Description : The main game loop and interaction functionalities 
+Copyright   : Copyright 2017, Gil Abinal and Maria Mamaclay, University of Calgary.
 License     : Permission to use, copy, modify, distribute and sell this software
               and its documentation for any purpose is hereby granted without fee, provided
               that the above copyright notice appear in all copies and that both that
@@ -13,10 +13,7 @@ Maintainer  : rkremer@ucalgary.ca
 Stability   : experimental
 Portability : ghc 7.10.2 - 7.10.3
 This module is used for CPSC 449 for the Apocalypse assignment.
-Limitations : This implementation only implements the human strategy
-              Additionally, this implementation only prints out the initial board of the gameplay, and will not loop through an entire game
-              When in interactive mode, the program will print out the initial move as well as the board when a black player does its first move
-              (the move for the white player will not be prompted, and will result as a PASS)
+Limitations : This implementation only implements the human and random strategy
 -}
 
 module Main (
@@ -54,7 +51,7 @@ main' args
         -- * Prints description and prompts user to input the strategies for the black and white players
         putStrLn "Possible strategies:"
         putStr printStrategies
-        -- * Asking for black strategy
+        -- * Asking for black strategy, and copies both the name of the strategy and the chooser type
         putStrLn ("Please enter a strategy for the black player: ")
         blackSName <- getLine
         blackStr <- checkStrategyValid blackSName
@@ -62,27 +59,25 @@ main' args
         putStrLn ("Please enter a strategy for the white player: ")
         whiteSName <- getLine
         whiteStr <- checkStrategyValid whiteSName
+        -- * passing both inputs for the black and white strategy into the main game loop
         gameLoop initBoard blackStr blackSName whiteStr whiteSName Normal False
     -- | Takes two inputted strategy names from command line and checks if they're valid
-    --   it will then print out the initial state of the board
+    --   and passes it to the main game loop
     | lengthArgs == 2 = do
         [blackSName, whiteSName] <- getArgs
         blackStr <- checkStrategyValid blackSName
         whiteStr <- checkStrategyValid whiteSName
         gameLoop initBoard blackStr blackSName whiteStr whiteSName Normal False
-    --    print initBoard
-        -- pass vakues onto game loop here 
     -- * Otherwise, prints out the list of possible strategies
     | otherwise = putStrLn ("\nInvalid number of arguments for strategies. Possible strategies are:" ++ printStrategies)
-    where lengthArgs  = length args
-          getBlackStr = map toLower (head args)
-          getWhiteStr = map toLower (last args)
+    where lengthArgs  = length args               -- ^ the number of arguments from the command line
+          getBlackStr = map toLower (head args)   -- ^ the inputted black strategy (not case sensitive)
+          getWhiteStr = map toLower (last args)   -- ^ the inputted white strategy
 
 ---User Prompt Functions------------------------------------------------------------
 
--- | checks if the user's inputted strategy is valid
---   if the inputted strategy is not "human", "random", or "greedy", the program will print the valid strategies
---   and exit
+-- | checkStrategyValid: checks if the user's inputted strategy is valid
+--   if the inputted strategy is not "human", "random", or "greedy", the program will print the valid strategies available and exit
 checkStrategyValid :: String -> IO(Chooser)
 checkStrategyValid "human" =  return human  
 checkStrategyValid "random" = return randomStr
@@ -94,10 +89,6 @@ printStrategies :: String
 printStrategies = let strategies = ["human","random","greedy"]
               in (foldr (++) "" ((map (\x -> "  " ++ x ++ "\n") strategies)))
 
--- | prints a welcome message and the list of playable strategies in interactive mode
---printDesc :: IO()
---printDesc = putStrLn ("\nWelcome to the Apocalypse Simulator! Please choose a strategy type for the black and white players:")
-
 -- | (in interactive mode) prompts user to input a strategy
 askStrategies :: String -> IO(Chooser)
 askStrategies player = do 
@@ -108,83 +99,77 @@ askStrategies player = do
 
 ---Game Loop Functions-------------------------------------------------------------
 
--- have to do: check the end game conditions (go to end game function)
--- then check on the collisions and pawn placements
--- check for goofs
--- check for collisions
--- and everything else
--- print and go back to loop game 
+{- | The main game loop function that interacts with the players and their inputs
+     Does the following:
+        1. prints the current board of the last round
+        2. checks if this board meets any of the lose conditions
+        3. if the board does not meet the loop conditions, it will:
+            a. gather the players' moves for the next round
+            b. update the game state based on these moves
+            c. if a PAWNPLACEMENT is needed, check through all the possible cases before updating the board
+            d. recurse back with the updated game state (ie. with the player's next inputted moves)
+        4. otherwise, the board will print out the associated game over message
+-}
 
--- LOSE CONDITIONS
--- One of the players loses all his/her pawns.  The other player is the winner. 
--- One of the players accumulates two penalty points.  The other player is the winner.
--- Both players pass on the same round. The one with the most pawns wins.
---gameLoop initBoard blackStr blackSName whiteStr whiteSName Normal False
 gameLoop :: GameState -> Chooser -> String -> Chooser -> String -> PlayType -> Bool -> IO()
 gameLoop currentBoard black blackStr white whiteStr playType end = do
-    --  retrieve player's played move type
-    let blackMoveType = blackPlay currentBoard
-    let whiteMoveType = whitePlay currentBoard
-
-    -- print the current board first
-    putStrLn $ show currentBoard 
+    putStrLn $ show currentBoard
+    -- the main game loop
     if (end == False) then
         do
-            -- check if players lost all their pawns
-            let findBlackPawns = findPawns (theBoard currentBoard) Black
-            let findWhitePawns = findPawns (theBoard currentBoard) White
-            -- check if players accumulated >2 penalty points
-            let blackMaxPenalty = blackPen currentBoard >= 2
-            let whiteMaxPenalty = whitePen currentBoard >= 2
-
-            -- check a player met a lose game condition
-            if (isEnd currentBoard) then
+            --  | checks a player met a lose game condition on the current board:
+            --    (1) One of the players loses all his/her pawns.  The other player is the winner. 
+            --    (2) One of the players accumulates two penalty points.  The other player is the winner.
+            if (notEnd currentBoard) then
                 do
-                    -- retrieve the black and white player's moves
-                  
+                    -- * retrieve the black and white player's moves                 
                     blackMove <- black currentBoard playType Black
                     whiteMove <- white currentBoard playType White
-                    
+                    -- * update the game state based on the inputted moves moves 
                     let updatedGS = updateGS currentBoard playType blackMove whiteMove
                         
-                    -- check if both players passed (human players only)
-                    -- display current board and recurse back  
+                    -- | checks the final lose game condition on the current board:
+                    --   (3) Both players pass on the same round. The one with the most pawns wins.
+                    --   should the board meet this condition, it will loop back and indicate that the end game condition has been met
                     if (blackMove == Nothing && whiteMove == Nothing) then
                         do
                             let updatedGS = GameState Passed (blackPen currentBoard) Passed (whitePen currentBoard) (theBoard currentBoard)
                             gameLoop updatedGS black blackStr white whiteStr playType True
                     else 
-                        do  
-                            -- TO DO: consider pawnplacement playtypes
-                            -- for now, this is the case for doing a NORMAL move
-                            -- make function that updates the values (make them a gamestate)
-                            
-                            -- Normal Playtype
+                        do                              
+                            -- | checks if there are any pawns present in a row that needs PAWN PLACEMENT (ie. a black pawn is in the white player's starting row, etc)
+                            --   if there are not any pawns in such a row, the game will be considered a NORMAL play type
                             if ((numInRow BP $ (theBoard updatedGS)!!0) == 0 ) && ((numInRow WP $ (theBoard updatedGS)!!4) == 0) then
-                                do
-                                  --  let updatedGS = updateGS currentBoard playType blackMove whiteMove
-                                    gameLoop updatedGS black blackStr white whiteStr Normal False
-                            -- PawnPlacement
+                                gameLoop updatedGS black blackStr white whiteStr Normal False -- ^ since this is a normal play type, go back and recursive as we do not need to update for pawn placement
+                            -- * this is the case where we need a PAWN PLACEMENT or promotion, and we will have to consider the following factors:
                             else 
                                 do
-                                    -- if end conditions are true
-                                        -- gameloop True
-                                    -- else
-                                            -- everything under this
-                                    if (isEnd updatedGS) then
+                                    -- * first check if the updated game state has NOT met an end game condition
+                                    if (notEnd updatedGS) then
                                         do
+                                            -- * if so, print out the board needed for pawn placement
                                             putStrLn $ show updatedGS
-                                          --  gameLoop updatedGS black blackStr white whiteStr Normal False
+                                            -- | in these following cases, the game checks if BOTH players need a pawn promotion or a pawn placement
+                                            --   should the updated game state meet this case, the game will ask and update the pawn based on four factors:
+                                            --       (1)   if both pawns are able to promote to the knight
+                                            --       (2-3) if a black pawn needs to promotes, but a white pawn needs placement (and the other way around
+                                            --       (4)   both pawns need a pawn placement
+                                            --   these cases will each do the following: 
+                                            --       (a) update a temporary game state for the black move
+                                            --       (b) update that temporary state for the white move
+                                            --       (c) compile both of these moves into a final updated game state, and pass that into the loop
                                             if (((numInRow BP $ (theBoard updatedGS)!!0) > 0) && ((numInRow WP $ (theBoard updatedGS)!!4) > 0)) then
                                                 do
+                                                    -- * case 1: two pawn promotions needed
                                                     if ((numOnBoard WK (theBoard updatedGS) == 2) && (numOnBoard BK (theBoard updatedGS) == 2)) then
                                                         do
                                                             let updatedGS' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (head (theBoard updatedGS)) True False 0)
                                                             let updatedGS'' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (last (theBoard updatedGS)) False True 0) 
                                                             let finalUpdate = GameState (blackPlay updatedGS') (blackPen updatedGS') (whitePlay updatedGS'') (whitePen updatedGS'') (theBoard updatedGS'')                                                    
                                                             gameLoop finalUpdate black blackStr white whiteStr Normal False
+                                                    -- * case 2: black promotion and white pawn placement
                                                     else if ((numOnBoard WK (theBoard updatedGS) < 2) && (numOnBoard BK (theBoard updatedGS) == 2)) then
-                                                        do -- black promote / white place
+                                                        do
                                                             let updatedGS' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (head (theBoard updatedGS)) True False 0)
                                                             whiteMove <- white updatedGS' PawnPlacement White
                                                             let updatedGS'' = do
@@ -193,8 +178,9 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
                                                                     maybe -> updatePP updatedGS' (getPawnPlace (blackPlay updatedGS')) (Just [(findPawnPromote (last (theBoard updatedGS')) False True 0), (head $ fromJust whiteMove)]) False True
                                                             let finalUpdate = GameState (blackPlay updatedGS') (blackPen updatedGS') (whitePlay updatedGS'') (whitePen updatedGS'') (theBoard updatedGS'')  
                                                             gameLoop finalUpdate black blackStr white whiteStr Normal False
+                                                    -- * case 3: black pawn placement and white promotion 
                                                     else if ((numOnBoard WK (theBoard updatedGS) == 2) && (numOnBoard BK (theBoard updatedGS) < 2)) then
-                                                        do -- black place / white promoto
+                                                        do
                                                             let updatedGS' = promotePawn updatedGS (theBoard updatedGS) (findPawnPromote (last (theBoard updatedGS)) False True 0) 
                                                             blackMove <- black updatedGS' PawnPlacement Black                                  
                                                             let updatedGS'' = do
@@ -203,6 +189,7 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
                                                                     maybe -> updatePP updatedGS' (Just [(findPawn (theBoard updatedGS) True (0,0)), (head $ fromJust blackMove)]) (getPawnPlace (whitePlay updatedGS')) True False
                                                             let finalUpdate = GameState (blackPlay updatedGS'') (blackPen updatedGS'') (whitePlay updatedGS') (whitePen updatedGS') (theBoard updatedGS'')  
                                                             gameLoop updatedGS'' black blackStr white whiteStr Normal False
+                                                    -- * case 4: two pawn placements needed
                                                     else
                                                         do
                                                             blackMove <- black currentBoard PawnPlacement Black
@@ -257,12 +244,12 @@ gameLoop currentBoard black blackStr white whiteStr playType end = do
             let gameOverMsg = getGameOverMsg blackStr ((length $ getPieces (theBoard currentBoard) Black PawnPlacement)) (blackPen currentBoard) whiteStr ((length $ getPieces (theBoard currentBoard) White PawnPlacement)) (whitePen currentBoard)
             putStrLn gameOverMsg
 
-isEnd :: GameState -> Bool
-isEnd currentGame = let findBlackPawns = findPawns (theBoard currentGame) Black
-                        findWhitePawns = findPawns (theBoard currentGame) White
-                        -- check if players accumulated >2 penalty points
-                        blackMaxPenalty = blackPen currentGame >= 2
-                        whiteMaxPenalty = whitePen currentGame >= 2
+notEnd :: GameState -> Bool
+notEnd currentGame = let findBlackPawns = findPawns (theBoard currentGame) Black
+                         findWhitePawns = findPawns (theBoard currentGame) White
+                         -- check if players accumulated >2 penalty points
+                         blackMaxPenalty = blackPen currentGame >= 2
+                         whiteMaxPenalty = whitePen currentGame >= 2
                     in ((findBlackPawns == True && findWhitePawns == True) && (blackMaxPenalty == False && whiteMaxPenalty == False))
 
 getGameOverMsg :: String -> Int -> Int -> String -> Int -> Int -> String
