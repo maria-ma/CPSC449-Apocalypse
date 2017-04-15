@@ -22,32 +22,35 @@ randomStr gamestate Normal player        = do -- return (Just [(0,0),(2,1)]) --d
     playPiece <- chooseRandom pieces
     --putStrLn ("length of list: " ++ (show $ length pieces) ++ " index num: " ++  (show randNum) ++ " chosen: " ++ (show playPiece))
     let moves = getMoveList board player playPiece
+    let possMoves = canMove board player playPiece moves
     --putStrLn "tryna get random move from play piece"
     --randNum2 <- genIndex moves
-    if (length moves == 0) then return Nothing
+    if (length possMoves == 0) then return Nothing
     else 
         do
-            (toX, toY) <- chooseRandom moves 
-            --putStrLn ("length of list: " ++ (show $ length moves) ++ " index num: " ++  (show randNum2) ++ " chosen: " ++ (show (toX, toY)))
-            -- !!!!!!!!!!!! pass on turn if length moves == 0 (nreturn nothing) !!!!!!!!!!!!!!
-            -- * checking if the given destination coordinates are valid
-            --   first check the range
-            if (checkCoordRange toX toY == False) then randomStr gamestate Normal player
-                -- checking if the intended pawn move is legal
-                else if (((getFromBoard board playPiece == WP) || (getFromBoard board playPiece == BP)) && (checkPawnLegal board player playPiece (toX, toY) == True))
-                    then return (Just [playPiece,(toX, toY)])
-                    -- * checking if the intended knight move is legal
-                    else if (((getFromBoard board playPiece == WK) || (getFromBoard board playPiece == BK)) && (checkKnightLegal board player playPiece (toX, toY) == True))
-                        then return (Just [playPiece,(toX, toY)])
+            move <- chooseRandom possMoves
+            return (Just [playPiece,move])
                         -- * otherwise, generate a new move
-                        else randomStr gamestate Normal player
+            --            else randomStr gamestate Normal player
     where board = (theBoard gamestate)
 -- * PawnPlacement playtype returns a cell on the board indicating the nearest empty space a pawn can go to
 randomStr gamestate PawnPlacement player = do --return (Just [(2,2)])
-    let emptySpaces = getEmpty (theBoard gamestate)
-    playPiece <- chooseRandom emptySpaces
+    randX <- chooseRandom4
+    randY <- chooseRandom4 
+    let playPiece = (randX, randY)
+    putStrLn $ "play piece: " ++ show playPiece
+    if ((checkEmptySpace (theBoard gamestate) playPiece) == True) then return (Just [playPiece])
+    else randomStr gamestate PawnPlacement player
 --    let move = placePawn (theBoard gamestate) player 0 0
-    return (Just [playPiece])
+
+canMove :: Board -> Player -> (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+canMove board player start [] = []
+canMove board player start (x:xs)
+    | (checkCoordRange (fst x) (snd x) == True) = do 
+        if (checkMoveLegal board player start x == True) then x : canMove board player start xs
+        else canMove board player start xs
+    | otherwise = canMove board player start xs
+
 
 -- | checkCoordRange: range checks the destination coordinates
 --   if an x or y coordinate is either >4 or <0, then return false
@@ -62,6 +65,8 @@ chooseRandom :: [a] -> IO a
 chooseRandom list = do
     index <- randomRIO (0, (length list) - 1)
     return (list !! index)
+chooseRandom4 :: IO Int
+chooseRandom4 = getStdRandom (randomR (0,4))
 
 --genIndex :: [a] -> IO Int
 --genIndex list = getStdRandom (randomR (0, (length list) - 1))

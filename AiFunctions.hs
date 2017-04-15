@@ -23,9 +23,6 @@ getPieces board White PawnPlacement = getBoardPieces (\x -> x == WP) board 0
 getPieces board Black Normal = getBoardPieces (\x -> x == BP || x == BK) board 0
 getPieces board Black PawnPlacement = getBoardPieces (\x -> x == BP) board 0
 
-getEmpty :: Board -> [(Int, Int)]
-getEmpty board = getBoardPieces (\x -> x == E) board 0
-
 -- | getBoardPieces: gets all available board pieces
 --   input: boolean function indicating which board piece is playable (white or black pieces), the board, starting row number
 --   returns: list of tuples of playable pieces
