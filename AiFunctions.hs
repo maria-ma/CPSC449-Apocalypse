@@ -1,3 +1,19 @@
+{- |
+Module      : AiFunctions
+Description : The functions needed for the random strategy to find and choose available moves
+Copyright   : Copyright 2017, Gil Abinal and Maria Mamaclay, University of Calgary.
+License     : Permission to use, copy, modify, distribute and sell this software
+              and its documentation for any purpose is hereby granted without fee, provided
+              that the above copyright notice appear in all copies and that both that
+              copyright notice and this permission notice appear in supporting
+              documentation. The University of Calgary makes no representations about the
+              suitability of this software for any purpose. It is provided "as is" without
+              express or implied warranty.
+Portability : ghc 7.10.2 - 7.10.3
+
+This module is used for CPSC 449 for the Apocalypse assignment.
+-}
+
 module AiFunctions where
 
 import Data.Maybe (fromJust, isNothing)
@@ -50,5 +66,7 @@ getMoveList board player (fromX, fromY)
                         Black -> -1
                         White -> 1
 
+-- | findPawns: get the number of pawns in the board and returns a boolean
 findPawns :: Board -> Player -> Bool
+-- | checks the length of the number of pawns in the board
 findPawns board player = (length $ getPieces board player PawnPlacement) > 0

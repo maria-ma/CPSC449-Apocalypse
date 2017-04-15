@@ -272,7 +272,7 @@ notEnd currentGame = let findBlackPawns = findPawns (theBoard currentGame) Black
 --           the white strategy name, the number of white pawns, the number of white penalties
 getGameOverMsg :: String -> Int -> Int -> String -> Int -> Int -> String
 getGameOverMsg black blackPawns blackPenalty white whitePawns whitePenalty
-    | (blackPawns == whitePawns) && ((blackPenalty == whitePenalty) || (blackPenalty < 2) || (whitePenalty < 2)) = formatGOMsg "Game is a Draw!" black blackPawns white whitePawns
+    | (blackPawns == whitePawns) && ((blackPenalty == whitePenalty) && (blackPenalty < 2) && (whitePenalty < 2)) = formatGOMsg "Game is a Draw!" black blackPawns white whitePawns
     | (blackPenalty > 1) = formatGOMsg "White wins! (Because Black accumulated >1 penalty points.)" black blackPawns white whitePawns
     | (whitePenalty > 1) = formatGOMsg "Black wins! (Because White accumulated >1 penalty points.)" black blackPawns white whitePawns
     | (blackPawns == 0) || (blackPawns < whitePawns) = formatGOMsg "White wins!" black blackPawns white whitePawns
