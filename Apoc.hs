@@ -286,9 +286,11 @@ formatGOMsg winMsg blackStr blackPawns whiteStr whitePawns = winMsg ++ "  Black 
 
 ---Gamestate updating functions-----------------------------------------------------
 
+-- | getPawnPlace: gets the destination of the pawn to be placed
+-- returns the source and destination if there is a valid input
+-- else return nothing
 getPawnPlace :: Played -> Maybe([(Int, Int)])
 getPawnPlace (PlacedPawn move) = Just [fst move, snd move]
---getPawnPlace (UpgradedPawn2Knight move) = Just [move]
 getPawnPlace _ = Nothing
 
 -- | updateGS: updates the game state based on the players' inputted moves
@@ -335,36 +337,59 @@ updateGS toUpdate Normal blackMove whiteMove = do
     else
         GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) Normal blackPlayType whitePlayType)
 
+        
+-- | findPawnPromote: checks the board for any pawn that can be promoted
+--   params: the cell, a boolean toggle for black player, a boolean toggle for white player, the starting coordinate(column) 
 findPawnPromote :: [Cell] -> Bool -> Bool -> Int -> (Int, Int)
+-- | findPawnPromote for black
+--   if the piece in the cell is a black pawn, return the startCoord (column) and 0 (row)
+--   else increment the startCoord by 1 (next column) and check
 findPawnPromote (x:xs) True white startCoord
     | (x == BP) = (startCoord, 0)
     | otherwise = findPawnPromote xs True white (startCoord + 1)
+-- | findPawnPromote for white
+--   if the piece in the cell is a white pawn, return the startCoord (column) and 0 (row)
+--   else increment the startCoord by 1 (next column) and check
 findPawnPromote (x:xs) black True startCoord
     | (x == WP) = (startCoord, 4)
     | otherwise = findPawnPromote xs black True (startCoord + 1)
 
-
+-- | promotePawn: checks the board for any pawn that can be promoted
+--   params: the game state to update, current board, the location of the pawn to be promoted
 promotePawn :: GameState -> Board -> (Int, Int) -> GameState
 promotePawn toUpdate board coord
+    -- | checks if the piece from the coordinate is a black pawn
+    -- if true, replace it with the a BK piece
+    -- else white pawn, replace it with a WK piece
     | ((getFromBoard board coord) == BP) = do
         let newBoard = replace2 board coord BK
         GameState (UpgradedPawn2Knight coord) (blackPen toUpdate) (None) (whitePen toUpdate) newBoard
     | otherwise = do
         let newBoard = replace2 board coord WK
         GameState (None) (blackPen toUpdate) (UpgradedPawn2Knight coord) (whitePen toUpdate) newBoard 
--- TODO: pawn placement cases
--- updateGS toUpdate PawnPlacement blackMove whiteMove = do
 
+
+-- | updatePP: updates the game state based on the players' inputted moves
+--   params: the game state to update, the black move coordinates, the white move coordinates, a boolean toggle for black and white player
 updatePP :: GameState -> Maybe [(Int,Int)] -> Maybe [(Int,Int)] -> Bool -> Bool -> GameState 
 updatePP toUpdate blackMove whiteMove isBlack isWhite = do
+    -- | checks for the validity of the black move
+    --  if it is black's turn and the move is Nothing return false, else return true
+    --  if it is not black's turn, check if the destination is valid
     let blackValid = do
         case blackMove of
             Nothing -> if (isBlack == True) then False else True 
             maybe -> checkEmptySpace (theBoard toUpdate) (last $ fromJust blackMove)
+    -- | checks for the validity of the white move
+    --  if it is white's turn and the move is Nothing return false, else return true
+    --  if it is not white's turn, check if the destination is valid
     let whiteValid = do
         case whiteMove of
             Nothing -> if (isWhite == True) then False else True  
             maybe -> checkEmptySpace (theBoard toUpdate) (last $ fromJust whiteMove)
+    -- | checks for the playType
+    --   if black's move is valid, it is PlacedPawn move, else it is None
+    --   if blacks's move is invalid and the move is Nothing, it is NullPlacedPawn, else it is a BadPlacedPawn
     let blackPlayType = do
         case blackValid of
             True ->  if (isBlack == True )then  PlacedPawn (head $ fromJust blackMove, last $ fromJust blackMove) else None
@@ -372,6 +397,9 @@ updatePP toUpdate blackMove whiteMove isBlack isWhite = do
                 case blackMove of 
                     Nothing -> NullPlacedPawn
                     maybe -> BadPlacedPawn (head $ fromJust blackMove, last $ fromJust blackMove)
+     -- | checks for the playType
+    --   if white's move is valid, it is PlacedPawn move, else it is None
+    --   if white's move is invalid and the move is Nothing, it is NullPlacedPawn, else it is a BadPlacedPawn
     let whitePlayType = do
         case whiteValid of
             True ->  if (isWhite == True) then PlacedPawn (head $ fromJust whiteMove, last $ fromJust whiteMove)  else None
@@ -379,6 +407,9 @@ updatePP toUpdate blackMove whiteMove isBlack isWhite = do
                 case blackMove of 
                     Nothing ->  NullPlacedPawn
                     maybe -> BadPlacedPawn (head $ fromJust whiteMove, last $ fromJust whiteMove)
+                    
+    -- | checks the penalty
+    --  if the move is invalid, add 1 to penalty to the respective player
     let blackNP = do
         case blackValid of
             True -> blackPen toUpdate
@@ -387,15 +418,16 @@ updatePP toUpdate blackMove whiteMove isBlack isWhite = do
         case whiteValid of
             True -> whitePen toUpdate
             False -> (whitePen toUpdate) +  1 
-            
-    if (blackPlayType == NullPlacedPawn) && (isBlack == True) then
-        -- white should be (none, pp)
+    
+    -- | if it is black's turn and it played a nullplacedpawn
+    --  return the old board 
+    if (blackPlayType == NullPlacedPawn) && (isBlack == True) the
        GameState blackPlayType blackNP whitePlayType whiteNP (theBoard toUpdate)  
-            -- * case 2 & 3: either the black player or the white player goof on a round
+    -- | if it is white's turn and it played a nullplacedpawn
+    --  return the old board 
     else if (whitePlayType == NullPlacedPawn) && (isWhite == True) then
-       -- black should be (none, pp)
        GameState blackPlayType blackNP whitePlayType whiteNP (theBoard toUpdate) 
-            -- * otherwise, proceed as a normal game 
+    -- updates the gamestate
     else 
        GameState blackPlayType blackNP whitePlayType whiteNP (updateBoard (theBoard toUpdate) PawnPlacement blackPlayType whitePlayType)
 
@@ -408,7 +440,7 @@ updateBoard :: Board -> PlayType -> Played -> Played -> Board -- use IO (Maybe [
 updateBoard toUpdate Normal Passed (Played whiteMove) = update1Player toUpdate whiteMove
 updateBoard toUpdate Normal (Played blackMove) Passed = update1Player toUpdate blackMove
 updateBoard toUpdate Normal (Played blackMove) (Played whiteMove) = update2Players toUpdate blackMove whiteMove
--- * TODO: pawn placement play type cases
+-- * pawn placement play type cases
 updateBoard toUpdate PawnPlacement (PlacedPawn blackMove) (PlacedPawn whiteMove) = update2Players toUpdate blackMove whiteMove
 updateBoard toUpdate PawnPlacement (PlacedPawn blackMove) _ = update1Player toUpdate blackMove
 updateBoard toUpdate PawnPlacement _ (PlacedPawn whiteMove) = update1Player toUpdate whiteMove
