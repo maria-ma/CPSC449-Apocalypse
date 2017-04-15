@@ -421,7 +421,7 @@ updatePP toUpdate blackMove whiteMove isBlack isWhite = do
     
     -- | if it is black's turn and it played a nullplacedpawn
     --  return the old board 
-    if (blackPlayType == NullPlacedPawn) && (isBlack == True) the
+    if (blackPlayType == NullPlacedPawn) && (isBlack == True) then
        GameState blackPlayType blackNP whitePlayType whiteNP (theBoard toUpdate)  
     -- | if it is white's turn and it played a nullplacedpawn
     --  return the old board 
