@@ -23,6 +23,9 @@ getPieces board White PawnPlacement = getBoardPieces (\x -> x == WP) board 0
 getPieces board Black Normal = getBoardPieces (\x -> x == BP || x == BK) board 0
 getPieces board Black PawnPlacement = getBoardPieces (\x -> x == BP) board 0
 
+getEmpty :: Board -> [(Int, Int)]
+getEmpty board = getBoardPieces (\x -> x == E) board 0
+
 -- | getBoardPieces: gets all available board pieces
 --   input: boolean function indicating which board piece is playable (white or black pieces), the board, starting row number
 --   returns: list of tuples of playable pieces
@@ -41,7 +44,7 @@ getMoveList :: Board -> Player -> (Int, Int) -> [(Int, Int)]
 getMoveList board player (fromX, fromY)
     -- * player is currently playing a pawn
     | (startPiece == WP) || (startPiece == BP) = 
-        [(fromX, fromY + forward), (fromX - 1, fromY + forward), (fromX + 1, fromY + forward)]
+        [(fromX, fromY + forward), (fromX - 1, fromY + forward), (fromX + 1, fromY + forward)]     
     -- * otherwise, player is currently playing a knight
     | otherwise = 
         [(fromX + 1, fromY + 2), (fromX + 1, fromY - 2), (fromX - 1, fromY - 2), (fromX -1, fromY +2), (fromX + 2, fromY + 1), (fromX + 2, fromY - 1), (fromX -2, fromY - 1), (fromX - 2, fromY + 1)]
@@ -49,6 +52,8 @@ getMoveList board player (fromX, fromY)
           forward = case player of
                         Black -> -1
                         White -> 1
-
+                        
+-- | findPawns: get the number of pawns in the board and returns a boolean
 findPawns :: Board -> Player -> Bool
+-- | checks the length of the number of pawns in the board
 findPawns board player = (length $ getPieces board player PawnPlacement) > 0
